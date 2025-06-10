@@ -37,3 +37,97 @@ Durante el inicio del año escolar, las listas de útiles estudiantiles generan 
     * [cite_start]Se pueden usar asistentes de código con IA como GitHub Copilot, ChatGPT, Gemini, etc., durante el desarrollo.
 
 ## 🚀 Estructura del Proyecto
+
+```
+LibreriaIA/
+├── LibreriaIA/                 # Configuración principal del proyecto
+│   ├── settings.py            # Configuraciones de Django
+│   ├── urls.py                # URLs principales
+│   └── wsgi.py                # Configuración WSGI
+├── asistente_compras/         # Aplicación principal
+│   ├── models.py              # Modelos de datos
+│   ├── views.py               # Vistas y lógica de negocio
+│   ├── urls.py                # URLs de la aplicación
+│   ├── admin.py               # Configuración del admin
+│   ├── templates/             # Plantillas HTML
+│   │   └── asistente_compras/
+│   │       ├── base.html      # Plantilla base
+│   │       ├── home.html      # Página de inicio
+│   │       ├── notes.html     # Formulario de creación
+│   │       └── list_detail.html # Detalles de lista
+│   ├── templatetags/          # Filtros personalizados
+│   │   └── custom_filters.py
+│   └── management/            # Comandos personalizados
+│       └── commands/
+│           └── populate_products.py
+├── static/                    # Archivos estáticos
+│   └── css/
+│       └── style.css          # Estilos personalizados
+├── manage.py                  # Script de gestión de Django
+├── populate_db.py             # Script de población (legacy)
+└── README.md                  # Este archivo
+```
+
+## 🔧 Comandos Útiles
+
+```bash
+# Crear migraciones
+python manage.py makemigrations
+
+# Aplicar migraciones
+python manage.py migrate
+
+# Poblar base de datos
+python manage.py populate_products
+
+# Crear superusuario
+python manage.py createsuperuser
+
+# Ejecutar servidor de desarrollo
+python manage.py runserver
+
+# Ejecutar tests (cuando se implementen)
+python manage.py test
+```
+
+## 🎨 Tecnologías Utilizadas
+
+- **Backend**: Django 5.2.3
+- **Base de Datos**: SQLite (desarrollo) / PostgreSQL (producción)
+- **Frontend**: HTML5, CSS3, JavaScript
+- **Framework CSS**: Bootstrap 5.3.0
+- **Iconos**: Font Awesome 6.0.0
+- **Lenguaje**: Python 3.13
+
+## 🔮 Próximas Mejoras
+
+- [ ] Integración con modelo de IA real (OpenAI, Google AI, etc.)
+- [ ] Sistema de autenticación de usuarios
+- [ ] API REST para integración con aplicaciones móviles
+- [ ] Sistema de notificaciones
+- [ ] Exportación de listas a PDF/Excel
+- [ ] Comparación de precios entre diferentes librerías
+- [ ] Sistema de cupones y descuentos
+- [ ] Integración con sistemas de pago
+
+## 🤝 Contribución
+
+Para contribuir al proyecto:
+
+1. Fork el repositorio
+2. Crea una rama para tu feature (`git checkout -b feature/nueva-funcionalidad`)
+3. Commit tus cambios (`git commit -am 'Agregar nueva funcionalidad'`)
+4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
+5. Crea un Pull Request
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+
+## 📞 Contacto
+
+Para preguntas o soporte, contacta al equipo de desarrollo.
+
+---
+
+**Desarrollado con ❤️ y Django**
