@@ -1,0 +1,272 @@
+{% extends 'asistente_compras/base.html' %}
+{% load custom_filters %}
+
+{% block title %}{{ shopping_list.name }} - Detalles{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <!-- Encabezado de la lista -->
+        <div class="list-header mb-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="list-title">
+                        <i class="fas fa-list me-2"></i>
+                        {{ shopping_list.name }}
+                    </h2>
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-calendar me-1"></i>
+                        Creada: {{ shopping_list.created_at|date:"d/m/Y H:i" }}
+                        {% if shopping_list.updated_at != shopping_list.created_at %}
+                            | Actualizada: {{ shopping_list.updated_at|date:"d/m/Y H:i" }}
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="list-stats text-end">
+                    <div class="stat-item">
+                        <span class="stat-label">Total de ítems:</span>
+                        <span class="stat-value">{{ total_items }}</span>
+                    </div>
+                    {% if total_estimated_cost > 0 %}
+                        <div class="stat-item">
+                            <span class="stat-label">Costo estimado:</span>
+                            <span class="stat-value text-success">${{ total_estimated_cost|floatformat:2 }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de ítems -->
+        <div class="items-list">
+            {% if items %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col">#</th>
+                                <th scope="col">Ítem Solicitado</th>
+                                <th scope="col">Cantidad</th>
+                                <th scope="col">Sugerencia de IA</th>
+                                <th scope="col">Precio</th>
+                                <th scope="col">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                                <tr class="item-row">
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <div class="item-name">
+                                            <strong>{{ item.item_name_raw }}</strong>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ item.quantity_requested }}</span>
+                                    </td>
+                                    <td>
+                                        {% if item.suggested_product %}
+                                            <div class="ai-suggestion">
+                                                <div class="suggestion-product">
+                                                    <strong>{{ item.suggested_product.name }}</strong>
+                                                    <br>
+                                                    <small class="text-muted">{{ item.suggested_product.brand }}</small>
+                                                </div>
+                                                <div class="suggestion-quality">
+                                                    <span class="badge bg-{{ item.suggested_product.quality_category|quality_badge_color }}">
+                                                        {{ item.suggested_product.get_quality_category_display }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <div class="no-suggestion">
+                                                <span class="text-muted">
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    Procesando...
+                                                </span>
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.suggested_product %}
+                                            <div class="price-info">
+                                                <span class="price">${{ item.suggested_product.price|floatformat:2 }}</span>
+                                                <br>
+                                                <small class="text-muted">
+                                                    Total: ${{ item.get_estimated_cost|floatformat:2 }}
+                                                </small>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            {% if item.ai_suggestions_json %}
+                                                <button type="button" 
+                                                        class="btn btn-outline-info btn-sm"
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#suggestionsModal{{ item.id }}">
+                                                    <i class="fas fa-eye me-1"></i>
+                                                    Ver Opciones
+                                                </button>
+                                            {% endif %}
+                                            <button type="button" 
+                                                    class="btn btn-outline-secondary btn-sm"
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#editItemModal{{ item.id }}">
+                                                <i class="fas fa-edit me-1"></i>
+                                                Editar
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="no-items text-center py-5">
+                    <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No hay ítems en esta lista</h4>
+                    <p class="text-muted">Parece que la lista está vacía.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="list-actions mt-4">
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'asistente_compras:home' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Volver al Inicio
+                </a>
+                <div>
+                    <a href="{% url 'asistente_compras:create_shopping_list' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>
+                        Crear Nueva Lista
+                    </a>
+                    <button type="button" class="btn btn-success">
+                        <i class="fas fa-download me-1"></i>
+                        Exportar Lista
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modales para mostrar sugerencias de IA -->
+{% for item in items %}
+    {% if item.ai_suggestions_json %}
+        <div class="modal fade" id="suggestionsModal{{ item.id }}" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-robot me-2"></i>
+                            Sugerencias de IA para: {{ item.item_name_raw }}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="ai-suggestions-list">
+                            {% with suggestions=item.get_ai_suggestions %}
+                                {% for suggestion in suggestions.suggestions %}
+                                    <div class="suggestion-card mb-3 p-3 border rounded">
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <h6 class="suggestion-title">{{ suggestion.product_name }}</h6>
+                                                <p class="suggestion-description text-muted mb-2">
+                                                    {{ suggestion.description }}
+                                                </p>
+                                                <div class="suggestion-details">
+                                                    <span class="badge bg-secondary me-2">{{ suggestion.brand }}</span>
+                                                    <span class="badge bg-{{ suggestion.quality|quality_badge_color }}">
+                                                        {{ suggestion.quality|title }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 text-end">
+                                                <div class="suggestion-price">
+                                                    <span class="price-large">${{ suggestion.price|floatformat:2 }}</span>
+                                                    <br>
+                                                    <small class="text-muted">Stock: {{ suggestion.stock }} unidades</small>
+                                                </div>
+                                                <form action="{% url 'asistente_compras:select_suggestion_for_item' shopping_list.id item.id %}" method="post">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="suggestion_index" value="{{ forloop.counter0 }}">
+                                                    <button type="submit" class="btn btn-primary btn-sm mt-2">
+                                                        <i class="fas fa-check me-1"></i>
+                                                        Seleccionar
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% endwith %}
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Modal para editar ítem -->
+    <div class="modal fade" id="editItemModal{{ item.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>
+                        Editar Ítem: {{ item.item_name_raw }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="mb-3">
+                            <label for="itemName{{ item.id }}" class="form-label">Nombre del ítem</label>
+                            <input type="text" class="form-control" id="itemName{{ item.id }}" 
+                                   value="{{ item.item_name_raw }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="itemQuantity{{ item.id }}" class="form-label">Cantidad</label>
+                            <input type="number" class="form-control" id="itemQuantity{{ item.id }}" 
+                                   value="{{ item.quantity_requested }}" min="1">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endfor %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Función para mostrar/ocultar detalles de sugerencias
+function toggleSuggestions(itemId) {
+    const suggestionsDiv = document.getElementById('suggestions-' + itemId);
+    if (suggestionsDiv.style.display === 'none') {
+        suggestionsDiv.style.display = 'block';
+    } else {
+        suggestionsDiv.style.display = 'none';
+    }
+}
+
+// Función para seleccionar una sugerencia
+function selectSuggestion(itemId, suggestionIndex) {
+    // Aquí se implementaría la lógica para seleccionar una sugerencia
+    console.log('Seleccionando sugerencia', suggestionIndex, 'para ítem', itemId);
+}
+</script>
+{% endblock %} 
