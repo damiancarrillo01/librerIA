@@ -1,0 +1,147 @@
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-boxes me-2"></i>
+                    Inventario de Productos
+                </h5>
+                <button class="btn btn-primary btn-sm" onclick="showAddProductModal()">
+                    <i class="fas fa-plus me-1"></i>
+                    Agregar Producto
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="inventory-container">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p class="mt-2">Cargando inventario...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para agregar producto -->
+<div class="modal fade" id="addProductModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>
+                    Agregar Producto
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="add-product-form">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Categoría</label>
+                        <select class="form-select" name="category">
+                            <option value="Papelería">Papelería</option>
+                            <option value="Escritura">Escritura</option>
+                            <option value="Geometría">Geometría</option>
+                            <option value="Arte">Arte</option>
+                            <option value="Tecnología">Tecnología</option>
+                            <option value="Organización">Organización</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Precio</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" name="price" min="0" step="100" required>
+                        </div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>
+                            Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const addProductModal = new bootstrap.Modal(document.getElementById('addProductModal'));
+
+function showAddProductModal() {
+    document.getElementById('add-product-form').reset();
+    addProductModal.show();
+}
+
+// Cargar inventario
+async function loadInventory() {
+    try {
+        const response = await fetch('/api/products');
+        const products = await response.json();
+        const container = document.getElementById('inventory-container');
+        if (products.length === 0) {
+            container.innerHTML = `<div class='text-center text-muted'>No hay productos en el inventario.</div>`;
+            return;
+        }
+        container.innerHTML = `
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Categoría</th>
+                        <th>Precio</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${products.map(p => `
+                        <tr>
+                            <td>${p.name}</td>
+                            <td>${p.category}</td>
+                            <td>$${p.price}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    } catch (error) {
+        document.getElementById('inventory-container').innerHTML = `<div class='alert alert-danger'>Error cargando inventario</div>`;
+    }
+}
+
+// Agregar producto
+const addProductForm = document.getElementById('add-product-form');
+addProductForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const product = {
+        name: formData.get('name'),
+        category: formData.get('category'),
+        price: parseInt(formData.get('price'))
+    };
+    try {
+        const response = await fetch('/api/products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(product)
+        });
+        if (response.ok) {
+            addProductModal.hide();
+            loadInventory();
+        } else {
+            throw new Error('Error agregando producto');
+        }
+    } catch (error) {
+        alert('Error agregando producto');
+    }
+});
+
+document.addEventListener('DOMContentLoaded', loadInventory);
+</script> 

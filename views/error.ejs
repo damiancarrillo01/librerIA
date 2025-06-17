@@ -1,0 +1,28 @@
+<div class="row">
+    <div class="col-md-8 mx-auto text-center">
+        <div class="error-container">
+            <i class="fas fa-exclamation-triangle fa-5x text-warning mb-4"></i>
+            <h1 class="display-4 text-danger mb-3"><%= status || 500 %></h1>
+            <h2 class="h4 mb-4"><%= message || 'Error interno del servidor' %></h2>
+            <p class="lead mb-4">
+                <%= details || 'Ha ocurrido un error inesperado. Por favor, intenta nuevamente.' %>
+            </p>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>
+                    Volver
+                </a>
+                <a href="/" class="btn btn-primary">
+                    <i class="fas fa-home me-2"></i>
+                    Ir al Inicio
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.error-container {
+    padding: 3rem 0;
+}
+</style> 

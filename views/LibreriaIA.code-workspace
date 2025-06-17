@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"name": "LibreriaIA",
+			"path": ".."
+		},
+		{
+			"name": "templates",
+			"path": "../../../../librerIA-main/asistente_compras/templates"
+		}
+	],
+	"settings": {
+		"postman.settings.dotenv-detection-notification-visibility": false
+	}
+}

@@ -1,0 +1,305 @@
+/* Librería IA - Estilos principales */
+
+:root {
+    --primary-color: #007bff;
+    --secondary-color: #6c757d;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+    --light-color: #f8f9fa;
+    --dark-color: #343a40;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+    margin: 0;
+    padding: 0;
+}
+
+/* Header y navegación */
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.navbar-nav .nav-link {
+    font-weight: 500;
+}
+
+/* Contenedores principales */
+.main-container {
+    min-height: calc(100vh - 200px);
+    padding: 2rem 0;
+}
+
+.card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--info-color));
+    color: white;
+    border-radius: 15px 15px 0 0 !important;
+    font-weight: bold;
+}
+
+/* Botones personalizados */
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--info-color));
+    border: none;
+    border-radius: 25px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, var(--success-color), #20c997);
+    border: none;
+    border-radius: 25px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, var(--danger-color), #e74c3c);
+    border: none;
+    border-radius: 25px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+}
+
+/* Formularios */
+.form-control {
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    padding: 0.75rem 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Tablas */
+.table {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.table thead th {
+    background: linear-gradient(135deg, var(--dark-color), var(--secondary-color));
+    color: white;
+    border: none;
+    font-weight: 600;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* Modales */
+.modal-content {
+    border-radius: 15px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--info-color));
+    color: white;
+    border-radius: 15px 15px 0 0;
+}
+
+.modal-title {
+    font-weight: bold;
+}
+
+/* Alertas */
+.alert {
+    border-radius: 10px;
+    border: none;
+    font-weight: 500;
+}
+
+.alert-success {
+    background: linear-gradient(135deg, var(--success-color), #20c997);
+    color: white;
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, var(--danger-color), #e74c3c);
+    color: white;
+}
+
+.alert-warning {
+    background: linear-gradient(135deg, var(--warning-color), #fd7e14);
+    color: white;
+}
+
+.alert-info {
+    background: linear-gradient(135deg, var(--info-color), #6f42c1);
+    color: white;
+}
+
+/* Badges */
+.badge {
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+}
+
+/* Precios */
+.price {
+    font-weight: bold;
+    color: var(--success-color);
+    font-size: 1.1rem;
+}
+
+.price-format {
+    font-family: 'Courier New', monospace;
+}
+
+/* Listas de compras */
+.shopping-list-item {
+    background: white;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+.shopping-list-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.shopping-list-item.selected {
+    border-left-color: var(--success-color);
+    background-color: rgba(40, 167, 69, 0.05);
+}
+
+/* Productos */
+.product-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.product-card .card-body {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.product-card .card-footer {
+    margin-top: auto;
+}
+
+/* Calidad de productos */
+.quality-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.quality-economico {
+    background-color: var(--success-color);
+}
+
+.quality-intermedio {
+    background-color: var(--warning-color);
+}
+
+.quality-calidad {
+    background-color: var(--danger-color);
+}
+
+/* Footer */
+.footer {
+    background: linear-gradient(135deg, var(--dark-color), var(--secondary-color));
+    color: white;
+    padding: 2rem 0;
+    margin-top: 3rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .main-container {
+        padding: 1rem 0;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Loading spinner */
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Tooltips personalizados */
+.tooltip-inner {
+    background-color: var(--dark-color);
+    border-radius: 10px;
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--info-color);
+} 

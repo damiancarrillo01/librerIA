@@ -1,0 +1,417 @@
+<!-- Sección de bienvenida -->
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="welcome-section text-center mb-5">
+            <div class="welcome-icon mb-4">
+                <i class="fas fa-robot fa-4x text-primary"></i>
+            </div>
+            <h2 class="welcome-title">Bienvenido al Asistente de Compras de Librería con IA</h2>
+            <p class="welcome-description lead">
+                Nuestra inteligencia artificial te ayudará a encontrar los mejores productos 
+                para tu lista de útiles escolares, con sugerencias personalizadas según tu presupuesto.
+            </p>
+        </div>
+
+        <!-- Botón para crear nueva lista -->
+        <div class="text-center mb-5">
+            <a href="/notes" class="btn btn-primary btn-lg me-3">
+                <i class="fas fa-plus-circle me-2"></i>
+                Crear Nueva Lista
+            </a>
+            <a href="/inventory" class="btn btn-success btn-lg">
+                <i class="fas fa-boxes me-2"></i>
+                Ver Inventario
+            </a>
+        </div>
+
+        <!-- Sección de listas existentes -->
+        <% if (typeof user !== 'undefined' && user && typeof userLists !== 'undefined' && userLists.length > 0) { %>
+            <div class="existing-lists-section">
+                <h3 class="section-title">
+                    <i class="fas fa-list me-2"></i>
+                    Tus Listas de Compras
+                </h3>
+                
+                <div class="row">
+                    <% userLists.forEach(function(shoppingList) { %>
+                        <div class="col-md-6 mb-3">
+                            <div class="card list-card">
+                                <div class="card-body">
+                                    <h5 class="card-title"><%= shoppingList.name %></h5>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar me-1"></i>
+                                            Creada: <%= new Date(shoppingList.createdAt).toLocaleDateString('es-ES', {
+                                                day: '2-digit',
+                                                month: '2-digit',
+                                                year: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            }) %>
+                                        </small>
+                                    </p>
+                                    <p class="card-text">
+                                        <i class="fas fa-shopping-cart me-1"></i>
+                                        <%= shoppingList.items ? shoppingList.items.length : 0 %> ítems
+                                    </p>
+                                    <% if (shoppingList.totalEstimatedCost && shoppingList.totalEstimatedCost > 0) { %>
+                                        <p class="card-text">
+                                            <i class="fas fa-dollar-sign me-1"></i>
+                                            Total estimado: $<%= Math.round(shoppingList.totalEstimatedCost) %>
+                                        </p>
+                                    <% } %>
+                                    <a href="/list/<%= shoppingList.id %>" 
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye me-1"></i>
+                                        Ver Detalles
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
+        <% } else if (typeof user !== 'undefined' && user) { %>
+            <div class="no-lists-section text-center">
+                <div class="no-lists-icon mb-3">
+                    <i class="fas fa-clipboard-list fa-3x text-muted"></i>
+                </div>
+                <h4 class="text-muted">No tienes listas de compras aún</h4>
+                <p class="text-muted">¡Crea tu primera lista y descubre cómo la IA puede ayudarte!</p>
+            </div>
+        <% } else { %>
+            <div class="guest-section text-center">
+                <div class="guest-icon mb-3">
+                    <i class="fas fa-user-plus fa-3x text-info"></i>
+                </div>
+                <h4 class="text-info">Inicia sesión para ver tus listas</h4>
+                <p class="text-muted">Regístrate o inicia sesión para crear y gestionar tus listas de compras.</p>
+            </div>
+        <% } %>
+
+        <!-- Sección de características -->
+        <div class="features-section mt-5">
+            <h3 class="section-title text-center mb-4">
+                <i class="fas fa-star me-2"></i>
+                Características Principales
+            </h3>
+            
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="feature-card text-center">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-brain fa-2x text-primary"></i>
+                        </div>
+                        <h5>IA Inteligente</h5>
+                        <p class="text-muted">
+                            Nuestra IA analiza tus necesidades y sugiere los mejores productos 
+                            según tu presupuesto y preferencias.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 mb-4">
+                    <div class="feature-card text-center">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-tags fa-2x text-success"></i>
+                        </div>
+                        <h5>Múltiples Opciones</h5>
+                        <p class="text-muted">
+                            Recibe sugerencias en diferentes rangos de precios: económico, 
+                            intermedio y de calidad premium.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 mb-4">
+                    <div class="feature-card text-center">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-chart-line fa-2x text-warning"></i>
+                        </div>
+                        <h5>Análisis de Costos</h5>
+                        <p class="text-muted">
+                            Calcula automáticamente el costo total de tu lista y 
+                            compara diferentes opciones.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="row mb-5">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <i class="fas fa-brain fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">IA Inteligente</h5>
+                <p class="card-text">
+                    Nuestro sistema de IA analiza tus necesidades y sugiere los mejores productos 
+                    según tu presupuesto y preferencias de calidad.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <i class="fas fa-chart-line fa-3x text-success mb-3"></i>
+                <h5 class="card-title">Optimización de Precios</h5>
+                <p class="card-text">
+                    Compara precios automáticamente y encuentra las mejores ofertas 
+                    para maximizar tu presupuesto escolar.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <i class="fas fa-file-pdf fa-3x text-danger mb-3"></i>
+                <h5 class="card-title">Exportación PDF</h5>
+                <p class="card-text">
+                    Genera comprobantes de compra profesionales en PDF 
+                    para llevar a la librería o compartir con otros.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quality Selection Modal -->
+<div class="modal fade" id="qualityModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-star me-2"></i>
+                    Seleccionar Calidad
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Selecciona tu preferencia de calidad para los productos:</p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-success" onclick="selectQuality('economico')">
+                        <i class="fas fa-dollar-sign me-2"></i>
+                        Económico
+                    </button>
+                    <button class="btn btn-outline-warning" onclick="selectQuality('intermedio')">
+                        <i class="fas fa-balance-scale me-2"></i>
+                        Intermedio
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="selectQuality('calidad')">
+                        <i class="fas fa-crown me-2"></i>
+                        Calidad Premium
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="processWithAI()">
+                        <i class="fas fa-robot me-2"></i>
+                        Procesar con IA
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales para el modal de calidad
+let selectedListType = null;
+let selectedQuality = null;
+const qualityModal = new bootstrap.Modal(document.getElementById('qualityModal'));
+
+// Cargar listas recientes
+async function loadRecentLists() {
+    try {
+        const response = await fetch('/api/shopping');
+        const data = await response.json();
+        const lists = data.lists || [];
+        const container = document.getElementById('recent-lists-container');
+        
+        if (lists && lists.length > 0) {
+            const recentLists = lists.slice(0, 5); // Mostrar solo las 5 más recientes
+            container.innerHTML = recentLists.map(list => `
+                <div class="list-item mb-3 p-3 border rounded">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">${list.name}</h6>
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>
+                                ${new Date(list.created_at).toLocaleDateString()}
+                            </small>
+                        </div>
+                        <div>
+                            <a href="/list/${list._id}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye me-1"></i>
+                                Ver
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No hay listas creadas aún</p>
+                    <a href="/notes" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>
+                        Crear Primera Lista
+                    </a>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error cargando listas recientes:', error);
+        document.getElementById('recent-lists-container').innerHTML = `
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Error cargando listas recientes
+            </div>
+        `;
+    }
+}
+
+// Crear lista estándar
+async function createStandardList(type) {
+    console.log('Creando lista estándar:', type); // Debug
+    
+    selectedListType = type;
+    
+    // Verificar si Bootstrap está disponible
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        const qualityModal = new bootstrap.Modal(document.getElementById('qualityModal'));
+        qualityModal.show();
+    } else {
+        console.error('Bootstrap no está disponible');
+        alert('Error: Bootstrap no está cargado');
+    }
+}
+
+// Seleccionar calidad
+async function selectQuality(quality) {
+    console.log('Seleccionando calidad:', quality); // Debug
+    selectedQuality = quality;
+    qualityModal.hide();
+    
+    if (!selectedListType) {
+        console.error('No hay tipo de lista seleccionado');
+        return;
+    }
+    
+    try {
+        // Mostrar loading
+        document.body.style.cursor = 'wait';
+        
+        console.log('Enviando request a:', `/api/shopping/standard/${selectedListType}`);
+        
+        // Llamar a la API correcta para listas estándar
+        const response = await fetch(`/api/shopping/standard/${selectedListType}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ quality_preference: quality })
+        });
+        
+        console.log('Response status:', response.status);
+        
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Lista creada:', result);
+            // Redirigir directamente al detalle de la lista
+            window.location.href = `/list/${result.list_id}`;
+        } else {
+            const errorData = await response.json();
+            console.error('Error del servidor:', errorData);
+            throw new Error(errorData.message || 'Error creando lista estándar');
+        }
+    } catch (error) {
+        console.error('Error creando lista estándar:', error);
+        alert('Error creando lista estándar: ' + error.message);
+    } finally {
+        document.body.style.cursor = 'default';
+    }
+}
+
+// Procesar con IA
+async function processWithAI() {
+    try {
+        document.body.style.cursor = 'wait';
+        const response = await fetch('/api/ai/process', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                listType: selectedListType,
+                quality: selectedQuality || 'intermedio'
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (result.success) {
+            window.location.href = `/list/${result.listId}`;
+        } else {
+            throw new Error(result.message || 'Error procesando con IA');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al procesar con IA: ' + error.message);
+    } finally {
+        document.body.style.cursor = 'default';
+        qualityModal.hide();
+    }
+}
+
+// Obtener nombre de lista estándar
+function getStandardListName(type) {
+    const names = {
+        'basica': 'Lista Básica Escolar',
+        'media': 'Lista Educación Media',
+        'universidad': 'Lista Universitaria'
+    };
+    return names[type] || 'Lista Personalizada';
+}
+
+// Obtener items estándar
+function getStandardItems(type, quality) {
+    const items = {
+        'basica': [
+            { name: 'Cuadernos', quantity: 5, category: 'Papelería' },
+            { name: 'Lápices', quantity: 10, category: 'Escritura' },
+            { name: 'Gomas de borrar', quantity: 3, category: 'Escritura' },
+            { name: 'Reglas', quantity: 2, category: 'Geometría' },
+            { name: 'Tijeras', quantity: 1, category: 'Manualidades' }
+        ],
+        'media': [
+            { name: 'Cuadernos universitarios', quantity: 8, category: 'Papelería' },
+            { name: 'Lápices mecánicos', quantity: 5, category: 'Escritura' },
+            { name: 'Calculadora científica', quantity: 1, category: 'Matemáticas' },
+            { name: 'Compás', quantity: 1, category: 'Geometría' },
+            { name: 'Transportador', quantity: 1, category: 'Geometría' }
+        ],
+        'universidad': [
+            { name: 'Cuadernos profesionales', quantity: 10, category: 'Papelería' },
+            { name: 'Lápices de dibujo', quantity: 12, category: 'Arte' },
+            { name: 'Calculadora avanzada', quantity: 1, category: 'Matemáticas' },
+            { name: 'USB', quantity: 2, category: 'Tecnología' },
+            { name: 'Carpetas organizadoras', quantity: 3, category: 'Organización' }
+        ]
+    };
+    
+    return items[type] || [];
+}
+
+// Cargar listas al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    loadRecentLists();
+});
+</script>
