@@ -717,7 +717,14 @@ def export_list_to_pdf(request, list_id):
         'CustomNormal',
         parent=styles['Normal'],
         fontSize=10,
-        spaceAfter=12
+        spaceAfter=12,
+        allowMarkup=1  # Aseguramos que el marcado HTML esté habilitado
+    )
+
+    bold_normal_style = ParagraphStyle(
+        'CustomNormalBold',
+        parent=normal_style, # Hereda propiedades de normal_style
+        fontName='Helvetica-Bold' # Establece explícitamente la fuente negrita
     )
     
     # Título principal
@@ -727,19 +734,18 @@ def export_list_to_pdf(request, list_id):
     
     # Información de la lista
     list_info = [
-        [Paragraph("<b>Nombre de la Lista:</b>", normal_style), shopping_list.name],
-        [Paragraph("<b>Fecha de Creación:</b>", normal_style), shopping_list.created_at.strftime("%d/%m/%Y %H:%M")],
-        [Paragraph("<b>Total de Ítems:</b>", normal_style), str(shopping_list.get_total_items())],
-        [Paragraph("<b>Preferencia de Calidad:</b>", normal_style), shopping_list.get_quality_preference_display()],
+        [Paragraph("Nombre de la Lista:", bold_normal_style), shopping_list.name],
+        [Paragraph("Fecha de Creación:", bold_normal_style), shopping_list.created_at.strftime("%d/%m/%Y %H:%M")],
+        [Paragraph("Total de Ítems:", bold_normal_style), str(shopping_list.get_total_items())],
+        [Paragraph("Preferencia de Calidad:", bold_normal_style), shopping_list.get_quality_preference_display()],
     ]
     
     if shopping_list.user:
-        list_info.append([Paragraph("<b>Cliente:</b>", normal_style), shopping_list.user.get_full_name() or shopping_list.user.username])
+        list_info.append([Paragraph("Cliente:", bold_normal_style), shopping_list.user.get_full_name() or shopping_list.user.username])
     
     list_table = Table(list_info, colWidths=[2*inch, 4*inch])
     list_table.setStyle(TableStyle([
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
         ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
         ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
@@ -797,7 +803,7 @@ def export_list_to_pdf(request, list_id):
         
         # Agregar fila de total
         table_data.append([
-            "", "", "", "", Paragraph("<b>TOTAL:</b>", normal_style), "", f"<b>${int(total_general):,}</b>"
+            "", "", "", "", Paragraph("TOTAL:", bold_normal_style), "", Paragraph(f"${int(total_general):,}", bold_normal_style)
         ])
         
         # Crear la tabla
@@ -820,7 +826,6 @@ def export_list_to_pdf(request, list_id):
             
             # Fila de total
             ('BACKGROUND', (0, -1), (-1, -1), colors.lightgrey),
-            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
             ('FONTSIZE', (0, -1), (-1, -1), 10),
             ('ALIGN', (0, -1), (-1, -1), 'CENTER'),
             
@@ -835,7 +840,7 @@ def export_list_to_pdf(request, list_id):
         # Información adicional
         if total_general > 0:
             info_text = f"""
-            <b>Resumen de la Compra:</b><br/>
+            <br/><b>Resumen de la Compra:</b><br/>
             • Total de productos: {len(items)}<br/>
             • Monto total: ${int(total_general):,}<br/>
             • Fecha de emisión: {datetime.now().strftime("%d/%m/%Y %H:%M")}<br/>
@@ -843,12 +848,16 @@ def export_list_to_pdf(request, list_id):
             """
         else:
             info_text = f"""
-            <b>Nota:</b><br/>
+            <br/><b>Nota:</b><br/>
             • Esta lista contiene {len(items)} productos<br/>
             • Los precios se calcularán cuando se seleccionen productos específicos<br/>
             • Fecha de emisión: {datetime.now().strftime("%d/%m/%Y %H:%M")}
             """
         
+        # Ensure that normal_style can handle markup.
+        normal_style.allowBreakups = 1
+        normal_style.wordWrap = 'CJK'
+
         info_paragraph = Paragraph(info_text, normal_style)
         story.append(info_paragraph)
         
