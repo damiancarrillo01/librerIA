@@ -148,10 +148,13 @@ Thumbs.db
 media/
 staticfiles/
 *.env
-google-services.json
-create_env.py
 
 # Project specific
 media/
 staticfiles/
-*.env 
+*.env
+
+# New additions
+google-services.json
+
+# Variables de entorno 

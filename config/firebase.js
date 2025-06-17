@@ -1,5 +1,6 @@
 const admin = require('firebase-admin');
 const { v4: uuidv4 } = require('uuid');
+require('dotenv').config();
 
 class FirebaseConfig {
     constructor() {
@@ -13,57 +14,29 @@ class FirebaseConfig {
         try {
             // Verificar si ya está inicializado
             if (admin.apps.length === 0) {
-                // Intentar usar archivo JSON directamente
-                const path = require('path');
-                const fs = require('fs');
-                const jsonFilePath = path.join(__dirname, '..', 'google-services.json');
-                
-                if (fs.existsSync(jsonFilePath)) {
-                    // Usar archivo JSON directamente
-                    const serviceAccount = require(jsonFilePath);
-                    
-                    // Configurar opciones de inicialización
-                    const firebaseConfig = {
-                        credential: admin.credential.cert(serviceAccount)
-                    };
-                    
-                    // Agregar storageBucket solo si está configurado
-                    const storageBucket = process.env.FIREBASE_STORAGE_BUCKET;
-                    if (storageBucket) {
-                        firebaseConfig.storageBucket = storageBucket;
-                    }
-                    
-                    admin.initializeApp(firebaseConfig);
-                    console.log('✅ Usando archivo JSON de Firebase');
-                } else {
-                    // Usar variables de entorno para credenciales
-                    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-                    
-                    // Configurar opciones de inicialización
-                    const firebaseConfig = {
-                        credential: admin.credential.cert({
-                            type: "service_account",
-                            project_id: process.env.FIREBASE_PROJECT_ID,
-                            private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-                            private_key: privateKey,
-                            client_email: process.env.FIREBASE_CLIENT_EMAIL,
-                            client_id: process.env.FIREBASE_CLIENT_ID,
-                            auth_uri: "https://accounts.google.com/o/oauth2/auth",
-                            token_uri: "https://oauth2.googleapis.com/token",
-                            auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-                            client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL
-                        })
-                    };
-                    
-                    // Agregar storageBucket solo si está configurado
-                    const storageBucket = process.env.FIREBASE_STORAGE_BUCKET;
-                    if (storageBucket) {
-                        firebaseConfig.storageBucket = storageBucket;
-                    }
-                    
-                    admin.initializeApp(firebaseConfig);
-                    console.log('✅ Usando variables de entorno de Firebase');
+                // Usar exclusivamente variables de entorno para credenciales
+                const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+                const firebaseConfig = {
+                    credential: admin.credential.cert({
+                        type: "service_account",
+                        project_id: process.env.FIREBASE_PROJECT_ID,
+                        private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+                        private_key: privateKey,
+                        client_email: process.env.FIREBASE_CLIENT_EMAIL,
+                        client_id: process.env.FIREBASE_CLIENT_ID,
+                        auth_uri: "https://accounts.google.com/o/oauth2/auth",
+                        token_uri: "https://oauth2.googleapis.com/token",
+                        auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+                        client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL
+                    })
+                };
+                // Agregar storageBucket solo si está configurado
+                const storageBucket = process.env.FIREBASE_STORAGE_BUCKET;
+                if (storageBucket) {
+                    firebaseConfig.storageBucket = storageBucket;
                 }
+                admin.initializeApp(firebaseConfig);
+                console.log('✅ Usando solo variables de entorno de Firebase');
                 console.log('✅ Firebase inicializado correctamente');
             }
 
