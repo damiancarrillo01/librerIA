@@ -68,6 +68,20 @@ class ShoppingList(models.Model):
         max_length=200, 
         verbose_name="Nombre de la lista"
     )
+    
+    QUALITY_PREFERENCE_CHOICES = [
+        ('cualquiera', 'Cualquier calidad'),
+        ('economico', 'Solo económicos'),
+        ('intermedio', 'Solo intermedios'),
+        ('calidad', 'Solo de calidad'),
+    ]
+    quality_preference = models.CharField(
+        max_length=20,
+        choices=QUALITY_PREFERENCE_CHOICES,
+        default='cualquiera',
+        verbose_name="Preferencia de calidad"
+    )
+    
     created_at = models.DateTimeField(
         auto_now_add=True, 
         verbose_name="Fecha de creación"
@@ -150,7 +164,6 @@ class ShoppingListItem(models.Model):
     def set_ai_suggestions(self, suggestions_dict):
         """Establece las sugerencias de IA desde un diccionario Python"""
         self.ai_suggestions_json = suggestions_dict
-        self.save()
     
     def get_estimated_cost(self):
         """Calcula el costo estimado para este ítem"""

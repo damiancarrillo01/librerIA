@@ -10,22 +10,37 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
+import environ # Importar django-environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Inicializar environ
+env = environ.Env(
+    # Establecer tipos por defecto y valores en caso de no estar presentes
+    DJANGO_DEBUG=(bool, True),  # Cambiado a True por defecto
+    DJANGO_ALLOWED_HOSTS=(list, ['localhost', '127.0.0.1']), # Hosts permitidos por defecto
+    DJANGO_DATABASE_URL=(str, 'sqlite:///db.sqlite3'), # URL de la base de datos
+    DJANGO_SECRET_KEY=(str, 'django-insecure-fallback-key-for-dev-only'),
+    DJANGO_LANGUAGE_CODE=(str, 'es-cl'),
+    DJANGO_TIME_ZONE=(str, 'America/Santiago'),
+)
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+# Leer el archivo .env (opcional, si existe)
+try:
+    env.read_env(os.path.join(BASE_DIR.parent, '.env'))
+except:
+    pass  # Si no existe el archivo .env, usar valores por defecto
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-l*nb3fnwr@7sc92iycyfl+rpg4^ir*(xv*^w0$e2qz0y!7lb=b'
+SECRET_KEY = env('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env('DJANGO_DEBUG')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env('DJANGO_ALLOWED_HOSTS')
 
 
 # Application definition
@@ -49,6 +64,18 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# Configuración adicional para Render/producción
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000 # 1 año
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    X_FRAME_OPTIONS = 'DENY' # Previene clickjacking
+
 
 ROOT_URLCONF = 'LibreriaIA.urls'
 
@@ -74,10 +101,7 @@ WSGI_APPLICATION = 'LibreriaIA.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': env.db('DJANGO_DATABASE_URL'), # Configura la base de datos usando la URL del entorno
 }
 
 
@@ -103,9 +127,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'es-es'  # Configurado para español
+LANGUAGE_CODE = env('DJANGO_LANGUAGE_CODE') # Lee del entorno
 
-TIME_ZONE = 'America/Argentina/Buenos_Aires'  # Zona horaria de Argentina
+TIME_ZONE = env('DJANGO_TIME_ZONE') # Lee del entorno
 
 USE_I18N = True
 
@@ -115,7 +139,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles' # Directorio donde collectstatic recolectará los archivos
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
