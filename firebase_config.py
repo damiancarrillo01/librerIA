@@ -46,7 +46,7 @@ class FirebaseConfig:
                     })
                     print("✅ Usando variables de entorno")
                 
-                firebase_admin.initialize_app(cred)
+                firebase_admin.initialize_app(cred, {'storageBucket': os.getenv('FIREBASE_STORAGE_BUCKET')})
                 print("✅ Firebase inicializado correctamente")
             
             # Inicializar servicios

@@ -147,4 +147,10 @@ Thumbs.db
 # Project specific
 media/
 staticfiles/
+*.env
+proyecto1-d6fb7-firebase-adminsdk-bz4ej-2bbed03ae6.json
+
+# Project specific
+media/
+staticfiles/
 *.env 
