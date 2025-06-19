@@ -156,23 +156,23 @@ class AIService {
             preescolar: {
                 name: 'Lista Preescolar',
                 items: [
-                    { name: 'Cuaderno de dibujo', quantity: 3 },
-                    { name: 'Lápices de colores', quantity: 1 },
-                    { name: 'Tijeras escolares', quantity: 1 },
-                    { name: 'Pegamento en barra', quantity: 2 },
-                    { name: 'Plastilina', quantity: 1 },
-                    { name: 'Mochila preescolar', quantity: 1 }
+                    { name: 'Cuaderno de dibujo', quantity: 3, category: 'Arte' },
+                    { name: 'Lápices de colores', quantity: 1, category: 'Arte' },
+                    { name: 'Tijeras escolares', quantity: 1, category: 'Manualidades' },
+                    { name: 'Pegamento en barra', quantity: 2, category: 'Manualidades' },
+                    { name: 'Plastilina', quantity: 1, category: 'Arte' },
+                    { name: 'Mochila preescolar', quantity: 1, category: 'Organización' }
                 ]
             },
             tecnico: {
                 name: 'Lista Técnica',
                 items: [
-                    { name: 'Cuaderno técnico', quantity: 6 },
-                    { name: 'Lápiz técnico', quantity: 5 },
-                    { name: 'Escuadra', quantity: 1 },
-                    { name: 'Cartabón', quantity: 1 },
-                    { name: 'Calculadora científica', quantity: 1 },
-                    { name: 'Compás técnico', quantity: 1 }
+                    { name: 'Cuaderno técnico', quantity: 6, category: 'Papelería' },
+                    { name: 'Lápiz técnico', quantity: 5, category: 'Escritura' },
+                    { name: 'Escuadra', quantity: 1, category: 'Geometría' },
+                    { name: 'Cartabón', quantity: 1, category: 'Geometría' },
+                    { name: 'Calculadora científica', quantity: 1, category: 'Matemáticas' },
+                    { name: 'Compás técnico', quantity: 1, category: 'Geometría' }
                 ]
             }
         };

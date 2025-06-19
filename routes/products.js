@@ -184,4 +184,27 @@ router.get('/:id', async (req, res) => {
     }
 });
 
+// GET - Obtener todos los productos de inventario
+router.get('/', async (req, res) => {
+    try {
+        console.log('GET /api/products llamado');
+        const snapshot = await firebase.db.collection('products').get();
+        const products = [];
+        snapshot.forEach(doc => {
+            products.push({ id: doc.id, ...doc.data() });
+        });
+        console.log(`Productos devueltos: ${products.length}`);
+        res.json({
+            success: true,
+            products
+        });
+    } catch (error) {
+        console.error('Error obteniendo productos:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor'
+        });
+    }
+});
+
 module.exports = router; 

@@ -12,6 +12,7 @@ const shoppingRoutes = require('./routes/shopping');
 const productRoutes = require('./routes/products');
 const authRoutes = require('./routes/auth');
 const aiRoutes = require('./routes/ai');
+const inventoryRoutes = require('./routes/inventory');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,6 +21,12 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Middleware para rutas de API
+app.use('/api', (req, res, next) => {
+    res.setHeader('Content-Type', 'application/json');
+    next();
+});
 
 // Configuración de sesiones
 app.use(session({
@@ -45,6 +52,7 @@ console.log('✅ Firebase configurado:', firebase.db ? 'Conectado' : 'No conecta
 app.use('/api/shopping', shoppingRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/inventory', inventoryRoutes);
 app.use('/ai', aiRoutes);
 
 // Rutas de páginas

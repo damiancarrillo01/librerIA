@@ -12,10 +12,43 @@ class FirebaseConfig {
 
     _initializeFirebase() {
         try {
+            // Verificar variables de entorno
+            console.log('🔍 Verificando variables de entorno...');
+            const requiredEnvVars = [
+                'FIREBASE_PROJECT_ID',
+                'FIREBASE_PRIVATE_KEY_ID',
+                'FIREBASE_PRIVATE_KEY',
+                'FIREBASE_CLIENT_EMAIL',
+                'FIREBASE_CLIENT_ID',
+                'FIREBASE_CLIENT_CERT_URL'
+            ];
+
+            const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+            if (missingVars.length > 0) {
+                throw new Error(`Faltan variables de entorno requeridas: ${missingVars.join(', ')}`);
+            }
+
             // Verificar si ya está inicializado
             if (admin.apps.length === 0) {
-                // Usar exclusivamente variables de entorno para credenciales
-                const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+                console.log('🚀 Inicializando Firebase Admin SDK...');
+                
+                // Procesar la clave privada
+                let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+                if (!privateKey) {
+                    throw new Error('FIREBASE_PRIVATE_KEY no está definida');
+                }
+
+                // Limpiar la clave privada
+                privateKey = privateKey
+                    .replace(/\\n/g, '\n')
+                    .replace(/^"|"$/g, '') // Remover comillas al inicio y final
+                    .trim();
+
+                console.log('📝 Verificando formato de la clave privada...');
+                if (!privateKey.startsWith('-----BEGIN PRIVATE KEY-----')) {
+                    throw new Error('Formato de clave privada inválido');
+                }
+
                 const firebaseConfig = {
                     credential: admin.credential.cert({
                         type: "service_account",
@@ -30,19 +63,40 @@ class FirebaseConfig {
                         client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL
                     })
                 };
+
                 // Agregar storageBucket solo si está configurado
                 const storageBucket = process.env.FIREBASE_STORAGE_BUCKET;
                 if (storageBucket) {
                     firebaseConfig.storageBucket = storageBucket;
                 }
-                admin.initializeApp(firebaseConfig);
-                console.log('✅ Usando solo variables de entorno de Firebase');
-                console.log('✅ Firebase inicializado correctamente');
+
+                console.log('📝 Configuración de Firebase:', {
+                    projectId: process.env.FIREBASE_PROJECT_ID,
+                    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                    hasPrivateKey: !!privateKey,
+                    privateKeyLength: privateKey.length
+                });
+
+                try {
+                    admin.initializeApp(firebaseConfig);
+                    console.log('✅ Firebase Admin SDK inicializado correctamente');
+                } catch (initError) {
+                    console.error('❌ Error al inicializar Firebase Admin SDK:', initError);
+                    throw initError;
+                }
+            } else {
+                console.log('ℹ️ Firebase Admin SDK ya está inicializado');
             }
 
             // Inicializar servicios
-            this.db = admin.firestore();
-            this.auth = admin.auth();
+            try {
+                this.db = admin.firestore();
+                this.auth = admin.auth();
+                console.log('✅ Firestore y Auth inicializados');
+            } catch (serviceError) {
+                console.error('❌ Error al inicializar servicios de Firebase:', serviceError);
+                throw serviceError;
+            }
             
             // Inicializar storage solo si está configurado
             try {
@@ -55,7 +109,8 @@ class FirebaseConfig {
             
         } catch (error) {
             console.error('❌ Error inicializando Firebase:', error);
-            console.log('💡 Asegúrate de que el archivo JSON de credenciales esté en la raíz del proyecto');
+            console.error('Stack trace:', error.stack);
+            throw error;
         }
     }
 

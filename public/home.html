@@ -2,19 +2,240 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Bienvenido a la Librería IA</title>
-    <link rel="stylesheet" href="css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asistente de Compras de Librería con IA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Bienvenido a la Librería IA</h1>
-        <p>¡Optimiza tus compras escolares y de oficina con inteligencia artificial!</p>
-        <ul>
-            <li>Lápiz - $10</li>
-            <li>Cuaderno - $50</li>
-            <li>Regla - $15</li>
-        </ul>
-        <a href="notes.html">Ver notas</a>
+    <script src="js/navbar.js"></script>
+    <div class="container mt-4">
+        <!-- Sección de bienvenida -->
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="welcome-section text-center mb-5">
+                    <div class="welcome-icon mb-4">
+                        <i class="fas fa-robot fa-4x text-primary"></i>
+                    </div>
+                    <h2 class="welcome-title">Bienvenido al Asistente de Compras de Librería con IA</h2>
+                    <p class="welcome-description lead">
+                        Nuestra inteligencia artificial te ayudará a encontrar los mejores productos 
+                        para tu lista de útiles escolares, con sugerencias personalizadas según tu presupuesto.
+                    </p>
+                </div>
+
+                <!-- Botones principales -->
+                <div class="text-center mb-5">
+                    <a href="/notes.html" class="btn btn-primary btn-lg me-3">
+                        <i class="fas fa-plus-circle me-2"></i>
+                        Crear Nueva Lista
+                    </a>
+                    <a href="/inventory.html" class="btn btn-success btn-lg">
+                        <i class="fas fa-boxes me-2"></i>
+                        Ver Inventario
+                    </a>
+                </div>
+
+                <!-- Sección de listas existentes -->
+                <div id="user-lists-section">
+                    <!-- El contenido se cargará dinámicamente -->
+                </div>
+
+                <!-- Sección de características -->
+                <div class="features-section mt-5">
+                    <h3 class="section-title text-center mb-4">
+                        <i class="fas fa-star me-2"></i>
+                        Características Principales
+                    </h3>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-4">
+                            <div class="feature-card text-center">
+                                <div class="feature-icon mb-3">
+                                    <i class="fas fa-brain fa-2x text-primary"></i>
+                                </div>
+                                <h5>IA Inteligente</h5>
+                                <p class="text-muted">
+                                    Nuestra IA analiza tus necesidades y sugiere los mejores productos 
+                                    según tu presupuesto y preferencias.
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-4">
+                            <div class="feature-card text-center">
+                                <div class="feature-icon mb-3">
+                                    <i class="fas fa-tags fa-2x text-success"></i>
+                                </div>
+                                <h5>Múltiples Opciones</h5>
+                                <p class="text-muted">
+                                    Recibe sugerencias en diferentes rangos de precios: económico, 
+                                    intermedio y de calidad premium.
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-4">
+                            <div class="feature-card text-center">
+                                <div class="feature-icon mb-3">
+                                    <i class="fas fa-chart-line fa-2x text-warning"></i>
+                                </div>
+                                <h5>Análisis de Costos</h5>
+                                <p class="text-muted">
+                                    Calcula automáticamente el costo total de tu lista y 
+                                    compara diferentes opciones.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Insertar navbar al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            insertNavbar();
+            loadUserLists();
+        });
+
+        // Cargar listas del usuario
+        async function loadUserLists() {
+            try {
+                const response = await fetch('/api/shopping');
+                const data = await response.json();
+                const lists = data.lists || [];
+                const container = document.getElementById('user-lists-section');
+                
+                if (lists.length > 0) {
+                    container.innerHTML = `
+                        <div class="existing-lists-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-list me-2"></i>
+                                Tus Listas de Compras
+                            </h3>
+                            
+                            <div class="row">
+                                ${lists.map(list => `
+                                    <div class="col-md-6 mb-3">
+                                        <div class="card list-card">
+                                            <div class="card-body">
+                                                <h5 class="card-title">${list.name}</h5>
+                                                <p class="card-text">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-calendar me-1"></i>
+                                                        Creada: ${new Date(list.createdAt).toLocaleDateString('es-ES', {
+                                                            day: '2-digit',
+                                                            month: '2-digit',
+                                                            year: 'numeric',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        })}
+                                                    </small>
+                                                </p>
+                                                <p class="card-text">
+                                                    <i class="fas fa-shopping-cart me-1"></i>
+                                                    ${list.items ? list.items.length : 0} ítems
+                                                </p>
+                                                ${list.totalEstimatedCost && list.totalEstimatedCost > 0 ? `
+                                                    <p class="card-text">
+                                                        <i class="fas fa-dollar-sign me-1"></i>
+                                                        Total estimado: $${Math.round(list.totalEstimatedCost)}
+                                                    </p>
+                                                ` : ''}
+                                                <div class="btn-group" role="group">
+                                                    <a href="/list.html?id=${list.id}" 
+                                                       class="btn btn-outline-primary btn-sm">
+                                                        <i class="fas fa-eye me-1"></i>
+                                                        Ver
+                                                    </a>
+                                                    <button onclick="editList('${list.id}')" 
+                                                            class="btn btn-outline-warning btn-sm">
+                                                        <i class="fas fa-edit me-1"></i>
+                                                        Editar
+                                                    </button>
+                                                    <button onclick="deleteList('${list.id}')" 
+                                                            class="btn btn-outline-danger btn-sm">
+                                                        <i class="fas fa-trash me-1"></i>
+                                                        Eliminar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <div class="no-lists-section text-center">
+                            <div class="no-lists-icon mb-3">
+                                <i class="fas fa-clipboard-list fa-3x text-muted"></i>
+                            </div>
+                            <h4 class="text-muted">No tienes listas de compras aún</h4>
+                            <p class="text-muted">¡Crea tu primera lista y descubre cómo la IA puede ayudarte!</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error cargando listas:', error);
+                document.getElementById('user-lists-section').innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error cargando listas
+                    </div>
+                `;
+            }
+        }
+
+        // Función para editar lista
+        async function editList(listId) {
+            try {
+                const response = await fetch(`/api/shopping/${listId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Redirigir a la página de edición
+                    window.location.href = `/notes.html?edit=${listId}`;
+                } else {
+                    throw new Error(data.message || 'Error al cargar la lista');
+                }
+            } catch (error) {
+                console.error('Error al cargar la lista:', error);
+                alert('Error al cargar la lista: ' + error.message);
+            }
+        }
+
+        // Función para eliminar lista
+        async function deleteList(listId) {
+            if (!confirm('¿Estás seguro de que deseas eliminar esta lista?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/shopping/${listId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Recargar la lista de listas
+                    loadUserLists();
+                } else {
+                    throw new Error(data.message || 'Error al eliminar la lista');
+                }
+            } catch (error) {
+                console.error('Error al eliminar la lista:', error);
+                alert('Error al eliminar la lista: ' + error.message);
+            }
+        }
+    </script>
 </body>
 </html>

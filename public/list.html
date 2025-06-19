@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalles de Lista de Compras</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .product-options {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .product-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background-color: white;
+        }
+        .product-option:hover {
+            background-color: #e9ecef;
+        }
+        .selected-option {
+            background-color: #e3f2fd;
+            border-color: #90caf9;
+        }
+    </style>
+</head>
+<body>
+    <script src="js/navbar.js"></script>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div id="list-details">
+                    <!-- El contenido se cargará dinámicamente -->
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para ver opciones de producto -->
+    <div class="modal fade" id="productOptionsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Opciones de Producto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="productOptionsContent">
+                        <!-- El contenido se cargará dinámicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para editar producto -->
+    <div class="modal fade" id="editProductModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Producto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editProductForm">
+                        <input type="hidden" id="editProductId">
+                        <div class="mb-3">
+                            <label for="editProductName" class="form-label">Nombre del Producto</label>
+                            <input type="text" class="form-control" id="editProductName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editProductQuantity" class="form-label">Cantidad</label>
+                            <input type="number" class="form-control" id="editProductQuantity" min="1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editProductCategory" class="form-label">Categoría</label>
+                            <select class="form-select" id="editProductCategory" required>
+                                <option value="Papelería">Papelería</option>
+                                <option value="Escritura">Escritura</option>
+                                <option value="Geometría">Geometría</option>
+                                <option value="Manualidades">Manualidades</option>
+                                <option value="Organización">Organización</option>
+                                <option value="Matemáticas">Matemáticas</option>
+                                <option value="Tecnología">Tecnología</option>
+                                <option value="Arte">Arte</option>
+                                <option value="Otros">Otros</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="saveProductEdit()">Guardar Cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Variables globales
+        let currentListId = null;
+        const productOptionsModal = new bootstrap.Modal(document.getElementById('productOptionsModal'));
+        const editProductModal = new bootstrap.Modal(document.getElementById('editProductModal'));
+
+        // Insertar navbar al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            insertNavbar();
+            // Mostrar productos realmente agregados si existen en localStorage
+            const addedItems = JSON.parse(localStorage.getItem('addedItems') || '[]');
+            if (addedItems.length > 0) {
+                let mensaje = 'Productos AGREGADOS a la lista:\n\n';
+                addedItems.forEach(item => {
+                    mensaje += `- ${item.name} (cantidad: ${item.quantity})\n`;
+                });
+                alert(mensaje);
+                localStorage.removeItem('addedItems');
+            }
+            // Mostrar productos sin stock si existen en localStorage
+            const noStockItems = JSON.parse(localStorage.getItem('noStockItems') || '[]');
+            if (noStockItems.length > 0) {
+                let mensaje = 'Los siguientes productos NO se agregaron por falta de stock:\n\n';
+                noStockItems.forEach(item => {
+                    mensaje += `- ${item.name} (solicitado: ${item.quantity_requested}, disponible: ${item.stock_disponible})\n`;
+                });
+                alert(mensaje);
+                localStorage.removeItem('noStockItems');
+            }
+            loadListDetails();
+        });
+
+        // Cargar detalles de la lista
+        async function loadListDetails() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const listId = urlParams.get('id');
+                if (!listId) {
+                    throw new Error('ID de lista no proporcionado');
+                }
+                currentListId = listId;
+                const response = await fetch(`/api/shopping/${listId}`);
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.message || 'Error al cargar la lista');
+                }
+                const list = data.list;
+                const items = data.items;
+                // Obtener todos los productos de inventario para mostrar el nombre real
+                let inventoryProducts = [];
+                try {
+                    const invRes = await fetch('/api/products');
+                    const invData = await invRes.json();
+                    if (invData.success) inventoryProducts = invData.products;
+                } catch {}
+                document.title = `${list.name} - Detalles de Lista`;
+                const container = document.getElementById('list-details');
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h3 class="mb-0">${list.name}</h3>
+                            <div class="btn-group">
+                                <a href="/notes.html?edit=${listId}" class="btn btn-warning">
+                                    <i class="fas fa-edit me-1"></i>
+                                    Editar Lista
+                                </a>
+                                <button onclick="deleteList('${listId}')" class="btn btn-danger">
+                                    <i class="fas fa-trash me-1"></i>
+                                    Eliminar Lista
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-4">
+                                <h5 class="card-title">Información de la Lista</h5>
+                                <p class="card-text">
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        Creada: ${new Date(list.createdAt).toLocaleDateString('es-ES', {
+                                            day: '2-digit',
+                                            month: '2-digit',
+                                            year: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}
+                                    </small>
+                                </p>
+                                <p class="card-text">
+                                    <i class="fas fa-tag me-1"></i>
+                                    Preferencia de calidad: ${list.quality_preference || 'Cualquiera'}
+                                </p>
+                            </div>
+                            <div class="items-section">
+                                <h5 class="card-title">Productos de la Lista</h5>
+                                ${items.length > 0 ? `
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Cantidad</th>
+                                                    <th>Producto</th>
+                                                    <th>Categoría</th>
+                                                    <th>Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${items.map(item => {
+                                                    const itemId = item.id || item._id;
+                                                    // Buscar el nombre real del producto de inventario asociado
+                                                    let prodName = item.item_name_raw;
+                                                    if (item.inventory_product_id && inventoryProducts.length > 0) {
+                                                        const prod = inventoryProducts.find(p => p.id === item.inventory_product_id);
+                                                        if (prod) prodName = prod.name;
+                                                    }
+                                                    return `
+                                                        <tr>
+                                                            <td>${item.quantity_requested}</td>
+                                                            <td>${prodName}</td>
+                                                            <td>${item.category || 'Otros'}</td>
+                                                            <td>
+                                                                <div class="btn-group">
+                                                                    <button onclick="viewProductOptions('${itemId}')" 
+                                                                            class="btn btn-outline-primary btn-sm">
+                                                                        <i class="fas fa-eye me-1"></i>
+                                                                        Ver
+                                                                    </button>
+                                                                    <button onclick="editProduct('${itemId}')" 
+                                                                            class="btn btn-outline-warning btn-sm">
+                                                                        <i class="fas fa-edit me-1"></i>
+                                                                        Editar
+                                                                    </button>
+                                                                    <button onclick="deleteProduct('${itemId}')" 
+                                                                            class="btn btn-outline-danger btn-sm">
+                                                                        <i class="fas fa-trash me-1"></i>
+                                                                        Eliminar
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    `;
+                                                }).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ` : `
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        No hay productos en esta lista
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error cargando detalles:', error);
+                document.getElementById('list-details').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Ver opciones de producto
+        async function viewProductOptions(productId) {
+            const container = document.getElementById('productOptionsContent');
+            if (!productId) {
+                container.innerHTML = `<div class="alert alert-danger">ID de producto no válido</div>`;
+                productOptionsModal.show();
+                return;
+            }
+            try {
+                const response = await fetch(`/api/shopping/${currentListId}/items/${productId}/options`);
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.message || 'Error al cargar las opciones');
+                }
+                const options = data.options;
+                container.innerHTML = `
+                    <div class="product-options">
+                        ${options.map(option => `
+                            <div class="product-option ${option.selected ? 'selected-option' : ''}">
+                                <div>
+                                    <h6 class="mb-1">${option.name}</h6>
+                                    <p class="mb-0 text-muted">${option.description || ''}</p>
+                                </div>
+                                <div class="text-end">
+                                    <div class="mb-1">$${option.price.toLocaleString()}</div>
+                                    <button onclick="selectProductOption('${productId}', '${option.id}')" 
+                                            class="btn btn-sm ${option.selected ? 'btn-success' : 'btn-outline-primary'}">
+                                        ${option.selected ? 'Seleccionado' : 'Seleccionar'}
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error cargando opciones:', error);
+                container.innerHTML = `<div class="alert alert-danger">Error al cargar las opciones: ${error.message}</div>`;
+            }
+            productOptionsModal.show();
+        }
+
+        // Seleccionar opción de producto
+        async function selectProductOption(productId, optionId) {
+            try {
+                const response = await fetch(`/api/shopping/${currentListId}/items/${productId}/select-option`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ option_id: optionId })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    productOptionsModal.hide();
+                    loadListDetails(); // Recargar la lista para ver los cambios
+                } else {
+                    throw new Error(data.message || 'Error al seleccionar la opción');
+                }
+            } catch (error) {
+                console.error('Error seleccionando opción:', error);
+                alert('Error al seleccionar la opción: ' + error.message);
+            }
+        }
+
+        // Editar producto
+        async function editProduct(productId) {
+            const errorContainer = document.getElementById('editProductError');
+            if (errorContainer) errorContainer.remove();
+            if (!productId) {
+                mostrarErrorEnModalEdicion('ID de producto no válido');
+                editProductModal.show();
+                return;
+            }
+            try {
+                const response = await fetch(`/api/shopping/${currentListId}/items/${productId}`);
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.message || 'Error al cargar el producto');
+                }
+                const product = data.item;
+                document.getElementById('editProductId').value = productId;
+                document.getElementById('editProductName').value = product.item_name_raw;
+                document.getElementById('editProductQuantity').value = product.quantity_requested;
+                document.getElementById('editProductCategory').value = product.category || 'Otros';
+                editProductModal.show();
+            } catch (error) {
+                console.error('Error cargando producto:', error);
+                mostrarErrorEnModalEdicion('Error al cargar el producto: ' + error.message);
+                editProductModal.show();
+            }
+        }
+
+        function mostrarErrorEnModalEdicion(msg) {
+            let form = document.getElementById('editProductForm');
+            if (form) {
+                let errorDiv = document.createElement('div');
+                errorDiv.id = 'editProductError';
+                errorDiv.className = 'alert alert-danger mt-2';
+                errorDiv.innerText = msg;
+                form.prepend(errorDiv);
+            }
+        }
+
+        // Guardar edición de producto
+        async function saveProductEdit() {
+            const productId = document.getElementById('editProductId').value;
+            const data = {
+                item_name_raw: document.getElementById('editProductName').value,
+                quantity_requested: parseInt(document.getElementById('editProductQuantity').value),
+                category: document.getElementById('editProductCategory').value
+            };
+
+            try {
+                const response = await fetch(`/api/shopping/${currentListId}/items/${productId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    editProductModal.hide();
+                    loadListDetails(); // Recargar la lista para ver los cambios
+                } else {
+                    throw new Error(result.message || 'Error al actualizar el producto');
+                }
+            } catch (error) {
+                console.error('Error actualizando producto:', error);
+                alert('Error al actualizar el producto: ' + error.message);
+            }
+        }
+
+        // Eliminar producto
+        async function deleteProduct(productId) {
+            // Creamos un modal simple para confirmar y mostrar errores
+            let modalDiv = document.createElement('div');
+            modalDiv.innerHTML = `
+            <div class='modal fade' id='modalEliminarProducto' tabindex='-1'>
+                <div class='modal-dialog'>
+                    <div class='modal-content'>
+                        <div class='modal-header'>
+                            <h5 class='modal-title'>Eliminar producto</h5>
+                            <button type='button' class='btn-close' data-bs-dismiss='modal'></button>
+                        </div>
+                        <div class='modal-body' id='deleteProductModalBody'>
+                            ¿Estás seguro de que deseas eliminar este producto?
+                        </div>
+                        <div class='modal-footer'>
+                            <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Cancelar</button>
+                            <button type='button' class='btn btn-danger' id='confirmDeleteProductBtn'>Eliminar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+            document.body.appendChild(modalDiv);
+            let modal = new bootstrap.Modal(modalDiv.querySelector('#modalEliminarProducto'));
+            modal.show();
+            modalDiv.querySelector('#confirmDeleteProductBtn').addEventListener('click', async function() {
+                try {
+                    const response = await fetch(`/api/shopping/${currentListId}/items/${productId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        modal.hide();
+                        setTimeout(()=>modalDiv.remove(), 300);
+                        loadListDetails(); // Recargar la lista para ver los cambios
+                    } else {
+                        throw new Error(data.message || 'Error al eliminar el producto');
+                    }
+                } catch (error) {
+                    console.error('Error eliminando producto:', error);
+                    document.getElementById('deleteProductModalBody').innerHTML = `<div class='alert alert-danger'>Error al eliminar el producto: ${error.message}</div>`;
+                }
+            });
+            // Limpiar modal al cerrar
+            modalDiv.querySelector('.btn-close').addEventListener('click', function() {
+                setTimeout(()=>modalDiv.remove(), 300);
+            });
+            modalDiv.querySelector('.btn-secondary').addEventListener('click', function() {
+                setTimeout(()=>modalDiv.remove(), 300);
+            });
+        }
+
+        // Eliminar lista
+        async function deleteList(listId) {
+            if (!confirm('¿Estás seguro de que deseas eliminar esta lista?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/shopping/${listId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    window.location.href = '/home.html';
+                } else {
+                    throw new Error(data.message || 'Error al eliminar la lista');
+                }
+            } catch (error) {
+                console.error('Error al eliminar la lista:', error);
+                alert('Error al eliminar la lista: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html> 

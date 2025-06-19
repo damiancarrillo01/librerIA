@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Inventario</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .product-card {
+            transition: transform 0.2s;
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+        }
+        .option-badge {
+            font-size: 0.8rem;
+            margin: 2px;
+        }
+    </style>
+</head>
+<body>
+    <script src="js/navbar.js"></script>
+    <div class="container mt-4">
+        <div class="row mb-4">
+            <div class="col">
+                <h2>Gestión de Inventario</h2>
+            </div>
+            <div class="col text-end">
+                <button class="btn btn-primary" onclick="showAddProductModal()">
+                    <i class="fas fa-plus me-2"></i>Agregar Producto
+                </button>
+            </div>
+        </div>
+
+        <div class="row" id="products-container">
+            <!-- Los productos se cargarán aquí dinámicamente -->
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para agregar/editar producto -->
+    <div class="modal fade" id="productModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Agregar Producto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="productForm">
+                        <input type="hidden" id="productId">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="productName" class="form-label">Nombre del Producto</label>
+                                <input type="text" class="form-control" id="productName" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="productCategory" class="form-label">Categoría</label>
+                                <select class="form-select" id="productCategory" required>
+                                    <option value="Papelería">Papelería</option>
+                                    <option value="Escritura">Escritura</option>
+                                    <option value="Geometría">Geometría</option>
+                                    <option value="Manualidades">Manualidades</option>
+                                    <option value="Organización">Organización</option>
+                                    <option value="Matemáticas">Matemáticas</option>
+                                    <option value="Tecnología">Tecnología</option>
+                                    <option value="Arte">Arte</option>
+                                    <option value="Otros">Otros</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="productDescription" class="form-label">Descripción</label>
+                            <textarea class="form-control" id="productDescription" rows="3"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="productPrice" class="form-label">Precio Base</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="productPrice" min="0" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="productStock" class="form-label">Stock</label>
+                                <input type="number" class="form-control" id="productStock" min="0" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Opciones de Producto</label>
+                            <div id="optionsContainer">
+                                <!-- Las opciones se agregarán aquí dinámicamente -->
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="addOption()">
+                                <i class="fas fa-plus me-1"></i>Agregar Opción
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="saveProduct()">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Variables globales
+        const productModal = new bootstrap.Modal(document.getElementById('productModal'));
+        let currentProductId = null;
+
+        // Insertar navbar al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            insertNavbar();
+            loadProducts();
+        });
+
+        // Cargar productos
+        async function loadProducts() {
+            try {
+                const response = await fetch('/api/inventory');
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.message || 'Error al cargar productos');
+                }
+
+                const container = document.getElementById('products-container');
+                if (data.products.length === 0) {
+                    container.innerHTML = `
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                No hay productos en el inventario
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = data.products.map(product => `
+                    <div class="col-md-4 mb-4">
+                        <div class="card product-card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">${product.name}</h5>
+                                <h6 class="card-subtitle mb-2 text-muted">${product.category}</h6>
+                                <p class="card-text">${product.description || 'Sin descripción'}</p>
+                                <div class="mb-2">
+                                    <span class="badge bg-primary">$${product.price.toLocaleString()}</span>
+                                    <span class="badge bg-secondary">Stock: ${product.stock}</span>
+                                </div>
+                                ${product.options && product.options.length > 0 ? `
+                                    <div class="mb-2">
+                                        <small class="text-muted">Opciones:</small><br>
+                                        ${product.options.map(opt => `
+                                            <span class="badge bg-info option-badge">
+                                                ${opt.name}: $${opt.price.toLocaleString()}
+                                            </span>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <div class="btn-group w-100">
+                                    <button onclick="editProduct('${product.id}')" class="btn btn-outline-warning">
+                                        <i class="fas fa-edit me-1"></i>Editar
+                                    </button>
+                                    <button onclick="deleteProduct('${product.id}')" class="btn btn-outline-danger">
+                                        <i class="fas fa-trash me-1"></i>Eliminar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error cargando productos:', error);
+                document.getElementById('products-container').innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            ${error.message}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Mostrar modal para agregar producto
+        function showAddProductModal() {
+            currentProductId = null;
+            document.getElementById('modalTitle').textContent = 'Agregar Producto';
+            document.getElementById('productForm').reset();
+            document.getElementById('optionsContainer').innerHTML = '';
+            productModal.show();
+        }
+
+        // Agregar opción de producto
+        function addOption() {
+            const container = document.getElementById('optionsContainer');
+            const optionDiv = document.createElement('div');
+            optionDiv.className = 'row mb-2';
+            optionDiv.innerHTML = `
+                <div class="col-md-6">
+                    <input type="text" class="form-control" placeholder="Nombre de la opción" required>
+                </div>
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control" placeholder="Precio" min="0" step="0.01" required>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.parentElement.remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            container.appendChild(optionDiv);
+        }
+
+        // Editar producto
+        async function editProduct(productId) {
+            try {
+                const response = await fetch(`/api/inventory/${productId}`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.message || 'Error al cargar el producto');
+                }
+
+                const product = data.product;
+                currentProductId = productId;
+                document.getElementById('modalTitle').textContent = 'Editar Producto';
+                document.getElementById('productName').value = product.name;
+                document.getElementById('productCategory').value = product.category;
+                document.getElementById('productDescription').value = product.description || '';
+                document.getElementById('productPrice').value = product.price;
+                document.getElementById('productStock').value = product.stock;
+
+                // Cargar opciones
+                const optionsContainer = document.getElementById('optionsContainer');
+                optionsContainer.innerHTML = '';
+                if (product.options && product.options.length > 0) {
+                    product.options.forEach(option => {
+                        const optionDiv = document.createElement('div');
+                        optionDiv.className = 'row mb-2';
+                        optionDiv.innerHTML = `
+                            <div class="col-md-6">
+                                <input type="text" class="form-control" value="${option.name}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" value="${option.price}" min="0" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.parentElement.remove()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        `;
+                        optionsContainer.appendChild(optionDiv);
+                    });
+                }
+
+                productModal.show();
+            } catch (error) {
+                console.error('Error cargando producto:', error);
+                alert('Error al cargar el producto: ' + error.message);
+            }
+        }
+
+        // Guardar producto
+        async function saveProduct() {
+            try {
+                const name = document.getElementById('productName').value.trim();
+                const category = document.getElementById('productCategory').value;
+                const description = document.getElementById('productDescription').value.trim();
+                const price = parseFloat(document.getElementById('productPrice').value);
+                const stock = parseInt(document.getElementById('productStock').value);
+
+                // Validaciones
+                if (!name) {
+                    throw new Error('El nombre del producto es requerido');
+                }
+                if (isNaN(price) || price <= 0) {
+                    throw new Error('El precio debe ser mayor a 0');
+                }
+                if (isNaN(stock) || stock < 0) {
+                    throw new Error('El stock no puede ser negativo');
+                }
+
+                // Recolectar opciones
+                const options = [];
+                const optionInputs = document.querySelectorAll('#optionsContainer .row');
+                optionInputs.forEach(row => {
+                    const nameInput = row.querySelector('input[type="text"]');
+                    const priceInput = row.querySelector('input[type="number"]');
+                    
+                    if (nameInput.value.trim() && priceInput.value) {
+                        const optionPrice = parseFloat(priceInput.value);
+                        if (isNaN(optionPrice) || optionPrice <= 0) {
+                            throw new Error('El precio de la opción debe ser mayor a 0');
+                        }
+                        options.push({
+                            name: nameInput.value.trim(),
+                            price: optionPrice
+                        });
+                    }
+                });
+
+                const productData = {
+                    name,
+                    category,
+                    description,
+                    price,
+                    stock,
+                    options
+                };
+
+                const url = currentProductId 
+                    ? `/api/inventory/${currentProductId}`
+                    : '/api/inventory';
+                
+                const method = currentProductId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(productData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Error al guardar el producto');
+                }
+
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.message || 'Error al guardar el producto');
+                }
+
+                productModal.hide();
+                loadProducts();
+            } catch (error) {
+                console.error('Error al guardar el producto:', error);
+                alert(error.message || 'Error al guardar el producto');
+            }
+        }
+
+        // Eliminar producto
+        async function deleteProduct(productId) {
+            if (!confirm('¿Estás seguro de que deseas eliminar este producto?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/inventory/${productId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    loadProducts();
+                } else {
+                    throw new Error(data.message || 'Error al eliminar el producto');
+                }
+            } catch (error) {
+                console.error('Error eliminando producto:', error);
+                alert('Error al eliminar el producto: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

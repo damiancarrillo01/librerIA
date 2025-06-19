@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Lista de Compras</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Firebase App (the core Firebase SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-app.js"></script>
+    <!-- Firebase Firestore -->
+    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-firestore.js"></script>
+</head>
+<body>
+    <script src="js/navbar.js"></script>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <h2 class="page-title text-center mb-4">Crear Nueva Lista de Compras</h2>
+
+                <!-- Listas estándar -->
+                <div class="standard-lists-section mb-5">
+                    <h3 class="section-title">
+                        <i class="fas fa-list me-2"></i>
+                        Listas Predefinidas
+                    </h3>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Lista Básica</h5>
+                                    <p class="card-text">Lista básica para estudiantes de primaria.</p>
+                                    <button onclick="showQualityModal('basica')" class="btn btn-primary">
+                                        <i class="fas fa-plus me-1"></i>
+                                        Crear Lista
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Lista Media</h5>
+                                    <p class="card-text">Lista para estudiantes de secundaria.</p>
+                                    <button onclick="showQualityModal('media')" class="btn btn-primary">
+                                        <i class="fas fa-plus me-1"></i>
+                                        Crear Lista
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Lista Universitaria</h5>
+                                    <p class="card-text">Lista completa para estudiantes universitarios.</p>
+                                    <button onclick="showQualityModal('universidad')" class="btn btn-primary">
+                                        <i class="fas fa-plus me-1"></i>
+                                        Crear Lista
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulario personalizado -->
+                <div class="custom-list-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-edit me-2"></i>
+                        Lista Personalizada
+                    </h3>
+                    <form id="custom-list-form" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="list_name" class="form-label">Nombre de la Lista</label>
+                            <input type="text" class="form-control" id="list_name" name="list_name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="quality_preference" class="form-label">Preferencia de Calidad</label>
+                            <select class="form-select" id="quality_preference" name="quality_preference">
+                                <option value="cualquiera">Cualquiera</option>
+                                <option value="economico">Económico</option>
+                                <option value="intermedio">Intermedio</option>
+                                <option value="premium">Premium</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="items_text" class="form-label">Ítems (uno por línea)</label>
+                            <textarea class="form-control" id="items_text" name="items_text" rows="5" 
+                                    placeholder="Ejemplo:&#10;2 Cuadernos&#10;5 Lápices&#10;1 Regla"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>
+                            Crear Lista
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Calidad -->
+    <div class="modal fade" id="qualityModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Seleccionar Calidad</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary create-standard-btn" data-quality="economico">
+                            <i class="fas fa-tags me-2"></i>
+                            Económico
+                        </button>
+                        <button class="btn btn-outline-primary create-standard-btn" data-quality="intermedio">
+                            <i class="fas fa-tags me-2"></i>
+                            Intermedio
+                        </button>
+                        <button class="btn btn-outline-primary create-standard-btn" data-quality="premium">
+                            <i class="fas fa-tags me-2"></i>
+                            Premium
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Insertar navbar al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            insertNavbar();
+            checkForEditMode();
+        });
+
+        // Variables globales
+        let selectedListType = null;
+        const qualityModal = new bootstrap.Modal(document.getElementById('qualityModal'));
+        let editingListId = null;
+
+        // Verificar si estamos en modo edición
+        async function checkForEditMode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const editId = urlParams.get('edit');
+            
+            if (editId) {
+                editingListId = editId;
+                await loadListForEditing(editId);
+            }
+        }
+
+        // Cargar lista para edición
+        async function loadListForEditing(listId) {
+            try {
+                const response = await fetch(`/api/shopping/${listId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const list = data.list;
+                    const items = data.items;
+                    
+                    // Actualizar título y formulario
+                    document.querySelector('.page-title').textContent = 'Editar Lista de Compras';
+                    document.getElementById('list_name').value = list.name;
+                    document.getElementById('quality_preference').value = list.quality_preference || 'cualquiera';
+                    
+                    // Cargar ítems en el área de texto
+                    const itemsText = items.map(item => 
+                        `${item.quantity_requested} ${item.item_name_raw}`
+                    ).join('\n');
+                    document.getElementById('items_text').value = itemsText;
+                    
+                    // Cambiar texto del botón de envío
+                    document.querySelector('button[type="submit"]').textContent = 'Guardar Cambios';
+                    
+                    // Ocultar sección de listas estándar
+                    document.querySelector('.standard-lists-section').style.display = 'none';
+                } else {
+                    throw new Error(data.message || 'Error al cargar la lista');
+                }
+            } catch (error) {
+                alert('Error al cargar la lista: ' + error.message);
+                window.location.href = '/home.html';
+            }
+        }
+
+        // Mostrar modal de calidad
+        function showQualityModal(listType) {
+            selectedListType = listType;
+            qualityModal.show();
+        }
+
+        // Crear lista estándar
+        async function createStandardList(quality) {
+            qualityModal.hide();
+            
+            try {
+                const response = await fetch(`/api/shopping/standard/${selectedListType}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ quality_preference: quality })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        window.location.href = `/list.html?id=${result.list_id}`;
+                    } else {
+                        throw new Error(result.message || 'Error creando lista estándar');
+                    }
+                } else {
+                    throw new Error('Error creando lista estándar');
+                }
+            } catch (error) {
+                console.error('Error creando lista:', error);
+                alert('Error creando lista: ' + error.message);
+            }
+        }
+
+        // Manejar formulario personalizado
+        document.getElementById('custom-list-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = {
+                name: formData.get('list_name'),
+                quality_preference: formData.get('quality_preference'),
+                items_text: formData.get('items_text')
+            };
+
+            try {
+                let response;
+                if (editingListId) {
+                    // Actualizar lista existente
+                    response = await fetch(`/api/shopping/${editingListId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+                } else {
+                    // Crear nueva lista
+                    response = await fetch('/api/shopping', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+                }
+                const result = await response.json();
+                if (result.success) {
+                    // Mostrar productos realmente agregados
+                    if (result.added_items && result.added_items.length > 0) {
+                        let mensaje = 'Productos AGREGADOS a la lista:\n\n';
+                        result.added_items.forEach(item => {
+                            mensaje += `- ${item.name} (cantidad: ${item.quantity})\n`;
+                        });
+                        alert(mensaje);
+                        localStorage.setItem('addedItems', JSON.stringify(result.added_items));
+                    }
+                    // Mostrar productos sin stock
+                    if (result.no_stock_items && result.no_stock_items.length > 0) {
+                        let mensaje = 'Los siguientes productos NO se agregaron por falta de stock:\n\n';
+                        result.no_stock_items.forEach(item => {
+                            mensaje += `- ${item.name} (solicitado: ${item.quantity_requested}, disponible: ${item.stock_disponible})\n`;
+                        });
+                        alert(mensaje);
+                        localStorage.setItem('noStockItems', JSON.stringify(result.no_stock_items));
+                    }
+                    // Redirigir a la lista creada
+                    window.location.href = `/list.html?id=${result.list_id}`;
+                } else {
+                    alert(result.message || 'Error al crear la lista');
+                }
+            } catch (error) {
+                alert('Error al crear la lista: ' + error.message);
+            }
+        });
+
+        // Manejar la selección de calidad
+        document.querySelectorAll('.create-standard-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const quality = this.getAttribute('data-quality');
+                if (selectedListType && quality) {
+                    createStandardList(quality);
+                }
+            });
+        });
+
+        // Validación del formulario
+        (function() {
+            'use strict';
+            const forms = document.querySelectorAll('.needs-validation');
+            Array.from(forms).forEach(form => {
+                form.addEventListener('submit', event => {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                });
+            });
+        })();
+    </script>
+</body>
+</html>
