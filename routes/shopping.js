@@ -752,6 +752,44 @@ router.post('/:listId/items/:itemId/select-option', async (req, res) => {
     }
 });
 
+// POST - Seleccionar una alternativa para un producto de la lista
+router.post('/:listId/items/:itemId/select-alternative', async (req, res) => {
+    try {
+        const { listId, itemId } = req.params;
+        const { alternative_product_id } = req.body;
+
+        if (!alternative_product_id) {
+            return res.status(400).json({ message: 'Se requiere el ID del producto alternativo.' });
+        }
+
+        // Obtener el producto alternativo del inventario
+        const alternativeProductRef = firebase.db.collection('products').doc(alternative_product_id);
+        const alternativeProductDoc = await alternativeProductRef.get();
+
+        if (!alternativeProductDoc.exists) {
+            return res.status(404).json({ message: 'El producto alternativo no existe en el inventario.' });
+        }
+        const alternativeProductData = alternativeProductDoc.data();
+
+        // Actualizar el item en la lista de compras
+        const itemRef = firebase.db.collection('shopping_list_items').doc(itemId);
+        await itemRef.update({
+            inventory_product_id: alternative_product_id,
+            selected_product_name: alternativeProductData.name,
+            selected_price: alternativeProductData.price,
+            brand: alternativeProductData.brand,
+            category: alternativeProductData.category,
+            ai_reason: 'Seleccionado manualmente por el usuario como alternativa.'
+        });
+
+        res.json({ message: 'Alternative selected successfully' });
+
+    } catch (error) {
+        console.error('Error al seleccionar la alternativa:', error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+});
+
 // Función auxiliar para parsear texto de ítems
 function parseItemsFromText(text) {
     const lines = text.split('\n').filter(line => line.trim());

@@ -312,15 +312,18 @@
             }
         }
 
-        // Editar producto (ahora es "Buscar Alternativas")
+        // Buscar alternativas para un producto
         async function findAlternatives(productId) {
-            const modalTitle = document.getElementById('productOptionsModalTitle');
-            const modalBody = document.getElementById('productOptionsModalBody');
+            const alternativesContainer = document.getElementById(`alternatives-${productId}`);
+            alternativesContainer.style.display = 'block';
+            alternativesContainer.innerHTML = `
+                <div class="text-center p-2">
+                    <div class="spinner-border spinner-border-sm" role="status">
+                        <span class="visually-hidden">Buscando...</span>
+                    </div>
+                </div>
+            `;
             
-            modalTitle.textContent = 'Buscar Alternativas';
-            modalBody.innerHTML = `<div class="text-center"><div class="spinner-border"></div></div>`;
-            productOptionsModal.show();
-
             try {
                 const response = await fetch(`${API_BASE_URL}/api/shopping/${currentListId}/items/${productId}/alternatives`);
                 const data = await response.json();
@@ -328,14 +331,15 @@
                 if (data.alternatives) {
                     renderAlternatives(productId, data.alternatives);
                 } else {
-                    modalBody.innerHTML = `<div class="alert alert-info">No se encontraron alternativas para este producto.</div>`;
+                    alternativesContainer.innerHTML = `<div class="alert alert-sm alert-warning">${data.message || 'No se encontraron alternativas.'}</div>`;
                 }
             } catch (error) {
                 console.error('Error buscando alternativas:', error);
-                modalBody.innerHTML = `<div class="alert alert-danger">Error al buscar alternativas: ${error.message}</div>`;
+                alternativesContainer.innerHTML = `<div class="alert alert-sm alert-danger">Error al buscar alternativas.</div>`;
             }
         }
 
+        // Seleccionar una alternativa
         async function selectAlternative(originalProductId, alternativeProductId) {
             try {
                 const response = await fetch(`${API_BASE_URL}/api/shopping/${currentListId}/items/${originalProductId}/select-alternative`, {
