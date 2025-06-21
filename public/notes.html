@@ -198,16 +198,16 @@
                     document.getElementById('items_text').value = itemsText;
                     
                     // Cambiar texto del botón de envío
-                    document.querySelector('button[type="submit"]').textContent = 'Guardar Cambios';
+                    document.querySelector('#custom-list-form button[type="submit"]').textContent = 'Actualizar Lista';
                     
-                    // Ocultar sección de listas estándar
+                    // Ocultar las listas predefinidas
                     document.querySelector('.standard-lists-section').style.display = 'none';
                 } else {
-                    throw new Error(data.message || 'Error al cargar la lista');
+                    throw new Error(data.message || 'No se pudo cargar la lista para editar.');
                 }
             } catch (error) {
-                alert('Error al cargar la lista: ' + error.message);
-                window.location.href = '/home.html';
+                console.error('Error al cargar la lista para edición:', error);
+                alert('Error: ' + error.message);
             }
         }
 
@@ -215,6 +215,20 @@
         function showQualityModal(listType) {
             selectedListType = listType;
             qualityModal.show();
+        }
+
+        // Mostrar un indicador de carga
+        function showLoadingIndicator() {
+            const resultsContainer = document.getElementById('results-container');
+            resultsContainer.style.display = 'block';
+            resultsContainer.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Procesando...</span>
+                    </div>
+                    <p class="mt-2">Creando tu lista con IA, esto puede tardar unos segundos...</p>
+                </div>
+            `;
         }
 
         // Crear lista estándar
