@@ -16,9 +16,4 @@ services:
       - key: FIREBASE_CLIENT_EMAIL
         sync: false
       - key: FIREBASE_PRIVATE_KEY
-        sync: false
-
-  - type: database
-    name: libreriaia_db
-    databaseName: libreriaia_db
-    plan: free # Puedes cambiar a un plan de pago si necesitas más recursos 
+        sync: false 
