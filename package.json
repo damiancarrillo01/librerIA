@@ -7,7 +7,10 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "build": "echo 'Build completed'",
-    "test": "echo 'No tests specified'"
+    "test": "echo 'No tests specified'",
+    "test:ai": "node scripts/testAI.js",
+    "test:smart": "node scripts/testSmartSelection.js",
+    "check:models": "node scripts/checkModels.js"
   },
   "keywords": [
     "libreria",
@@ -20,6 +23,7 @@
   "author": "Gonzalo Garcés Santana & Damian Carrillo",
   "license": "MIT",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",

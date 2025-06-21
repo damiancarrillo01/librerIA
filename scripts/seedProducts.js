@@ -7,6 +7,7 @@ const products = [
     description: 'Cuaderno tamaño carta, rayado, 100 hojas',
     price: 2500,
     brand: 'Torre',
+    category: 'Papelería',
     quality_category: 'economico',
     stock: 50
   },
@@ -15,6 +16,7 @@ const products = [
     description: 'Lápiz de grafito, tipo HB, ideal para escribir y dibujar',
     price: 300,
     brand: 'Faber-Castell',
+    category: 'Escritura',
     quality_category: 'economico',
     stock: 200
   },
@@ -23,6 +25,7 @@ const products = [
     description: 'Goma de borrar suave, no mancha',
     price: 250,
     brand: 'Pelikan',
+    category: 'Escritura',
     quality_category: 'economico',
     stock: 120
   },
@@ -31,6 +34,7 @@ const products = [
     description: 'Regla plástica transparente de 30cm',
     price: 600,
     brand: 'Maped',
+    category: 'Geometría',
     quality_category: 'intermedio',
     stock: 80
   },
@@ -39,6 +43,7 @@ const products = [
     description: 'Tijeras con punta redonda para niños',
     price: 900,
     brand: 'Norma',
+    category: 'Manualidades',
     quality_category: 'intermedio',
     stock: 60
   },
@@ -47,6 +52,7 @@ const products = [
     description: 'Pegamento en barra no tóxico, 21g',
     price: 700,
     brand: 'Pritt',
+    category: 'Manualidades',
     quality_category: 'intermedio',
     stock: 100
   },
@@ -55,6 +61,7 @@ const products = [
     description: 'Mochila resistente, varios compartimentos',
     price: 12000,
     brand: 'Totto',
+    category: 'Organización',
     quality_category: 'calidad',
     stock: 30
   },
@@ -63,6 +70,7 @@ const products = [
     description: 'Estuche con cierre, capacidad para 30 lápices',
     price: 1800,
     brand: 'Faber-Castell',
+    category: 'Organización',
     quality_category: 'intermedio',
     stock: 70
   },
@@ -71,6 +79,7 @@ const products = [
     description: 'Bolígrafo tinta azul, trazo suave',
     price: 350,
     brand: 'BIC',
+    category: 'Escritura',
     quality_category: 'economico',
     stock: 300
   },
@@ -79,6 +88,7 @@ const products = [
     description: 'Bolígrafo tinta roja, trazo suave',
     price: 350,
     brand: 'BIC',
+    category: 'Escritura',
     quality_category: 'economico',
     stock: 200
   },
@@ -87,6 +97,7 @@ const products = [
     description: 'Bolígrafo tinta negra, trazo suave',
     price: 350,
     brand: 'BIC',
+    category: 'Escritura',
     quality_category: 'economico',
     stock: 200
   },
@@ -95,6 +106,7 @@ const products = [
     description: 'Resaltador color amarillo, punta biselada',
     price: 800,
     brand: 'Stabilo',
+    category: 'Escritura',
     quality_category: 'intermedio',
     stock: 90
   },
@@ -103,6 +115,7 @@ const products = [
     description: 'Calculadora científica 240 funciones',
     price: 8500,
     brand: 'Casio',
+    category: 'Matemáticas',
     quality_category: 'calidad',
     stock: 25
   },
@@ -111,6 +124,7 @@ const products = [
     description: 'Compás metálico para dibujo técnico',
     price: 2200,
     brand: 'Staedtler',
+    category: 'Geometría',
     quality_category: 'calidad',
     stock: 40
   },
@@ -119,6 +133,7 @@ const products = [
     description: 'Transportador plástico transparente',
     price: 500,
     brand: 'Maped',
+    category: 'Geometría',
     quality_category: 'intermedio',
     stock: 60
   },
@@ -127,6 +142,7 @@ const products = [
     description: 'Escuadra plástica 45 grados',
     price: 700,
     brand: 'Maped',
+    category: 'Geometría',
     quality_category: 'intermedio',
     stock: 60
   },
@@ -135,6 +151,7 @@ const products = [
     description: 'Cartulina tamaño carta, color blanco',
     price: 200,
     brand: 'Norma',
+    category: 'Arte',
     quality_category: 'economico',
     stock: 150
   },
@@ -143,6 +160,7 @@ const products = [
     description: 'Sacapuntas de metal, resistente',
     price: 400,
     brand: 'Faber-Castell',
+    category: 'Escritura',
     quality_category: 'intermedio',
     stock: 100
   },
@@ -151,6 +169,7 @@ const products = [
     description: 'Agenda con calendario y horarios',
     price: 3500,
     brand: 'Norma',
+    category: 'Organización',
     quality_category: 'calidad',
     stock: 40
   },
@@ -159,6 +178,7 @@ const products = [
     description: 'Cuaderno grande, 200 hojas, tapa dura',
     price: 4200,
     brand: 'Torre',
+    category: 'Papelería',
     quality_category: 'calidad',
     stock: 35
   },
@@ -168,6 +188,7 @@ const products = [
     description: 'Memoria USB 32GB, alta velocidad',
     price: 6500,
     brand: 'Kingston',
+    category: 'Tecnología',
     quality_category: 'intermedio',
     stock: 60
   },
@@ -176,6 +197,7 @@ const products = [
     description: 'Mouse óptico inalámbrico, USB',
     price: 7800,
     brand: 'Logitech',
+    category: 'Tecnología',
     quality_category: 'calidad',
     stock: 40
   },
@@ -184,6 +206,7 @@ const products = [
     description: 'Teclado con teclas multimedia y diseño ergonómico',
     price: 9500,
     brand: 'Genius',
+    category: 'Tecnología',
     quality_category: 'intermedio',
     stock: 30
   },
@@ -192,6 +215,7 @@ const products = [
     description: 'Audífonos con micrófono, cómodos para estudio',
     price: 12000,
     brand: 'Sony',
+    category: 'Tecnología',
     quality_category: 'calidad',
     stock: 25
   },
@@ -201,6 +225,7 @@ const products = [
     description: 'Acuarelas escolares, 12 colores',
     price: 2200,
     brand: 'Pelikan',
+    category: 'Arte',
     quality_category: 'intermedio',
     stock: 50
   },
@@ -209,6 +234,7 @@ const products = [
     description: 'Set de 5 pinceles variados',
     price: 1800,
     brand: 'Winsor & Newton',
+    category: 'Arte',
     quality_category: 'calidad',
     stock: 30
   },
@@ -217,6 +243,7 @@ const products = [
     description: 'Block de hojas blancas para dibujo artístico',
     price: 2100,
     brand: 'Liderpapel',
+    category: 'Arte',
     quality_category: 'intermedio',
     stock: 40
   },
@@ -225,6 +252,7 @@ const products = [
     description: 'Set de 24 lápices de colores',
     price: 3200,
     brand: 'Faber-Castell',
+    category: 'Arte',
     quality_category: 'calidad',
     stock: 60
   },

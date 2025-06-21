@@ -12,7 +12,6 @@ const shoppingRoutes = require('./routes/shopping');
 const productRoutes = require('./routes/products');
 const authRoutes = require('./routes/auth');
 const aiRoutes = require('./routes/ai');
-const inventoryRoutes = require('./routes/inventory');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -52,7 +51,6 @@ console.log('✅ Firebase configurado:', firebase.db ? 'Conectado' : 'No conecta
 app.use('/api/shopping', shoppingRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/inventory', inventoryRoutes);
 app.use('/ai', aiRoutes);
 
 // Rutas de páginas
@@ -78,14 +76,6 @@ app.get('/list/:id', (req, res) => {
         title: 'Detalle de Lista',
         icon: 'list',
         listId: req.params.id,
-        user: req.session.user || null
-    });
-});
-
-app.get('/inventory', (req, res) => {
-    res.render('inventory', { 
-        title: 'Inventario de Productos',
-        icon: 'boxes',
         user: req.session.user || null
     });
 });

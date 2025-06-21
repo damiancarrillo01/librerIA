@@ -236,6 +236,63 @@
                 alert('Error al eliminar la lista: ' + error.message);
             }
         }
+
+        function renderLists(lists) {
+            const container = document.getElementById('recent-lists-container');
+            if (!container) return;
+
+            if (!lists || lists.length === 0) {
+                container.innerHTML = `<div class="col-12"><div class="alert alert-light text-center">No has creado ninguna lista todavía.</div></div>`;
+                return;
+            }
+
+            container.innerHTML = lists.map(list => {
+                let formattedDate = 'Fecha no disponible';
+                if (list.created_at) {
+                    try {
+                        // El objeto de fecha de Firestore tiene `_seconds`. Lo convertimos a milisegundos.
+                        const date = new Date(list.created_at._seconds * 1000);
+                        if (!isNaN(date)) {
+                            formattedDate = date.toLocaleDateString('es-ES', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric'
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Error formateando fecha:', e);
+                    }
+                }
+                
+                const productCount = list.item_count !== undefined ? list.item_count : 0;
+
+                return `
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card h-100 shadow-sm list-card">
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title text-truncate">${list.name || 'Lista sin nombre'}</h5>
+                                <p class="card-text text-muted mb-2">
+                                    <i class="fas fa-calendar-alt me-2"></i>
+                                    Creada: ${formattedDate}
+                                </p>
+                                <p class="card-text text-muted mb-4">
+                                    <i class="fas fa-box-open me-2"></i>
+                                    ${productCount} ${productCount === 1 ? 'producto' : 'productos'}
+                                </p>
+                                <div class="mt-auto">
+                                    <a href="/list/${list.id}" class="btn btn-primary btn-sm me-1">
+                                        <i class="fas fa-eye me-1"></i>Ver
+                                    </a>
+                                    <button onclick="deleteList('${list.id}', this)" class="btn btn-outline-danger btn-sm">
+                                        <i class="fas fa-trash me-1"></i>Eliminar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
     </script>
 </body>
 </html>

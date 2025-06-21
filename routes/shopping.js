@@ -1,3 +1,4 @@
+const express = require('express');
 const router = express.Router();
 const firebase = require('../config/firebase');
 const AIService = require('../services/aiService');
@@ -7,21 +8,38 @@ const admin = require('firebase-admin');
 // GET - Obtener todas las listas de compras (solo ejemplo, puedes mejorar la consulta según tu estructura de usuarios)
 router.get('/', async (req, res) => {
     try {
-        const snapshot = await firebase.db.collection('shopping_lists').get();
+        const userId = req.session.user ? req.session.user.id : null;
+        // Temporalmente, para desarrollo, si no hay user_id, se muestran todas.
+        // En producción, aquí habría que retornar un error 401 si no hay userId.
+        
+        let query = firebase.db.collection('shopping_lists');
+        if (userId) {
+            query = query.where('user_id', '==', userId);
+        }
+        
+        const snapshot = await query.orderBy('created_at', 'desc').get();
+        
         const lists = [];
-        snapshot.forEach(doc => {
-            lists.push({ id: doc.id, ...doc.data() });
-        });
-        res.json({
-            success: true,
-            lists: lists
-        });
+        for (const doc of snapshot.docs) {
+            const listData = doc.data();
+            
+            // Contar los ítems de cada lista
+            const itemsSnapshot = await firebase.db.collection('shopping_list_items')
+                .where('shopping_list_id', '==', doc.id)
+                .get();
+            
+            lists.push({
+                id: doc.id,
+                ...listData,
+                item_count: itemsSnapshot.size // Añadir el conteo de ítems
+            });
+        }
+        
+        res.json({ success: true, lists: lists });
+
     } catch (error) {
-        console.error('Error obteniendo listas:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error interno del servidor'
-        });
+        console.error("Error obteniendo listas de compras:", error);
+        res.status(500).json({ success: false, message: 'Error interno del servidor.' });
     }
 });
 
@@ -44,71 +62,65 @@ async function buscarProductoIA(nombreSolicitado, cantidad) {
     return (mejorProducto && mejorProducto.stock >= cantidad) ? mejorProducto : null;
 }
 
-// POST - Crear nueva lista de compras con IA
+// POST - Crear nueva lista de compras con IA (REFACTORIZADO)
 router.post('/', async (req, res) => {
-    console.log('POST /api/shopping llamado', req.body);
     try {
-        const { name, quality_preference = 'cualquiera', items_text } = req.body;
-        if (!name) {
-            return res.status(400).json({ success: false, message: 'El nombre de la lista es requerido' });
+        const { name, quality_preference, items_text, client_description } = req.body;
+        if (!name || !items_text) {
+            return res.status(400).json({ success: false, message: 'El nombre y los ítems de la lista son requeridos.' });
         }
+
+        // 1. Crear el documento de la lista primero.
         const listData = {
-            name: name,
-            quality_preference: quality_preference,
+            name,
+            quality_preference: quality_preference || 'cualquiera',
+            client_description: client_description || '',
             user_id: req.session.user ? req.session.user.id : null,
             created_at: new Date()
         };
         const listRef = await firebase.db.collection('shopping_lists').add(listData);
-        const listId = listRef.id;
 
-        let noStockItems = [];
-        let addedItems = [];
-        if (items_text) {
-            const items = parseItemsFromText(items_text);
-            for (const item of items) {
-                const producto = await buscarProductoIA(item.name, item.quantity);
-                if (producto) {
-                    // Agregar a la lista de compras
-                    const itemData = {
-                        shopping_list_id: listId,
-                        item_name_raw: producto.name,
-                        quantity_requested: item.quantity,
-                        created_at: new Date(),
-                        inventory_product_id: producto.id,
-                        price: producto.price,
-                        brand: producto.brand || '',
-                        category: producto.category || ''
-                    };
-                    await firebase.db.collection('shopping_list_items').add(itemData);
-                    addedItems.push({
-                        name: producto.name,
-                        quantity: item.quantity,
-                        inventory_product_id: producto.id
-                    });
-                } else {
-                    noStockItems.push({
-                        name: item.name,
-                        quantity_requested: item.quantity,
-                        stock_disponible: 0
-                    });
-                }
-            }
+        // 2. Procesar los ítems con el nuevo servicio refactorizado.
+        const itemsToProcess = parseItemsFromText(items_text);
+        const result = await AIService.processShoppingList(
+            itemsToProcess,
+            { description: client_description },
+            quality_preference
+        );
+        
+        // 3. Guardar los productos encontrados en la base de datos (batch write).
+        if (result.added_items && result.added_items.length > 0) {
+            const batch = firebase.db.batch();
+            result.added_items.forEach(item => {
+                const newItemRef = firebase.db.collection('shopping_list_items').doc();
+                const itemData = {
+                    shopping_list_id: listRef.id,
+                    item_name_raw: item.name,
+                    quantity_requested: item.quantity_requested,
+                    inventory_product_id: item.id,
+                    price: item.price,
+                    brand: item.brand,
+                    category: item.category,
+                    ai_reason: item.reasoning,
+                    created_at: new Date(),
+                };
+                batch.set(newItemRef, itemData);
+            });
+            await batch.commit();
         }
 
+        // 4. Devolver la respuesta detallada al frontend.
         res.json({
             success: true,
-            message: 'Lista de compras creada exitosamente',
-            list_id: listId,
-            added_items: addedItems,
-            no_stock_items: noStockItems
+            message: 'Lista procesada.',
+            list_id: listRef.id,
+            added_items: result.added_items,
+            not_found_items: result.not_found_items
         });
 
     } catch (error) {
         console.error('Error creando lista:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error interno del servidor'
-        });
+        res.status(500).json({ success: false, message: 'Error interno del servidor.' });
     }
 });
 
@@ -129,11 +141,20 @@ router.get('/:id', async (req, res) => {
         const itemsSnapshot = await firebase.db.collection('shopping_list_items')
             .where('shopping_list_id', '==', req.params.id).get();
         const items = [];
-        itemsSnapshot.forEach(doc => items.push(doc.data()));
+        itemsSnapshot.forEach(doc => {
+            items.push({
+                id: doc.id,
+                _id: doc.id,
+                ...doc.data()
+            });
+        });
         console.log('Lista encontrada y items cargados', { id: req.params.id, itemsCount: items.length });
         res.json({
             success: true,
-            list: list,
+            list: {
+                id: doc.id,
+                ...list
+            },
             items: items
         });
     } catch (error) {
@@ -192,76 +213,60 @@ router.put('/:id', async (req, res) => {
     console.log('PUT /:id llamada', { id: req.params.id, body: req.body });
     try {
         const listId = req.params.id;
-        const { name, quality_preference, items_text } = req.body;
+        const { name, quality_preference, items_text, client_description } = req.body;
 
         if (!name) {
-            console.log('Falta el nombre de la lista');
-            return res.status(400).json({
-                success: false,
-                message: 'El nombre de la lista es requerido'
-            });
+            return res.status(400).json({ success: false, message: 'El nombre de la lista es requerido.' });
         }
 
-        // Verificar si la lista existe
-        const listDoc = await firebase.db.collection('shopping_lists').doc(listId).get();
-        if (!listDoc.exists) {
-            console.log('Lista no encontrada al actualizar', { id: listId });
-            return res.status(404).json({
-                success: false,
-                message: 'Lista no encontrada'
-            });
-        }
-
-        // Actualizar datos de la lista
+        // 1. Actualizar metadatos de la lista
         await firebase.db.collection('shopping_lists').doc(listId).update({
             name: name,
             quality_preference: quality_preference || 'cualquiera',
+            client_description: client_description || '',
             updated_at: new Date()
         });
-        console.log('Datos de la lista actualizados', { id: listId });
 
-        // Si hay ítems nuevos, eliminar los antiguos y agregar los nuevos
+        let addedItems = [];
+        let notFoundItems = [];
+
+        // 2. Si se proveyeron ítems, reemplazar los existentes
         if (items_text) {
-            // Eliminar ítems existentes
-            const itemsSnapshot = await firebase.db.collection('shopping_list_items')
-                .where('shopping_list_id', '==', listId)
-                .get();
+            // Borrar todos los ítems antiguos de la lista
+            const itemsSnapshot = await firebase.db.collection('shopping_list_items').where('shopping_list_id', '==', listId).get();
+            const deleteBatch = firebase.db.batch();
+            itemsSnapshot.forEach(doc => deleteBatch.delete(doc.ref));
+            await deleteBatch.commit();
 
-            const batch = firebase.db.batch();
-            itemsSnapshot.forEach(doc => {
-                batch.delete(doc.ref);
-            });
-
-            // Agregar nuevos ítems
+            // Agregar los nuevos ítems con la misma lógica de selección inteligente
             const items = parseItemsFromText(items_text);
-            for (const item of items) {
-                const itemData = {
-                    shopping_list_id: listId,
-                    item_name_raw: item.name,
-                    quantity_requested: item.quantity,
-                    created_at: new Date()
-                };
-                const newItemRef = firebase.db.collection('shopping_list_items').doc();
-                batch.set(newItemRef, itemData);
-            }
+            const selectionResult = await AIService.processShoppingList(items, { description: client_description }, quality_preference);
 
-            // Ejecutar todas las operaciones en lote
-            await batch.commit();
-            console.log('Ítems de la lista actualizados', { id: listId, itemsCount: items.length });
+            if (selectionResult.success) {
+                for (const p of selectionResult.added_items) {
+                    await firebase.db.collection('shopping_list_items').add({ shopping_list_id: listId, ...p });
+                    addedItems.push(p);
+                }
+                if (selectionResult.not_found_items) {
+                    notFoundItems = selectionResult.not_found_items.map(item => ({ name: item.name, reason: item.reason }));
+                }
+            } else {
+                notFoundItems = items.map(item => ({ name: item.name, reason: "Error del servicio de IA." }));
+            }
         }
 
+        // 3. Devolver la respuesta detallada
         res.json({
             success: true,
             message: 'Lista actualizada exitosamente',
-            list_id: listId
+            list_id: listId,
+            added_items: addedItems,
+            not_found_items: notFoundItems
         });
 
     } catch (error) {
         console.error('Error actualizando lista:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error interno del servidor'
-        });
+        res.status(500).json({ success: false, message: 'Error interno del servidor.' });
     }
 });
 
@@ -269,7 +274,7 @@ router.put('/:id', async (req, res) => {
 router.post('/standard/:type', async (req, res) => {
     try {
         const { type } = req.params;
-        const { quality_preference = 'cualquiera' } = req.body;
+        const { quality_preference = 'cualquiera', client_description } = req.body;
         const standardLists = AIService.getStandardLists();
         const standardList = standardLists[type];
         if (!standardList) {
@@ -282,22 +287,84 @@ router.post('/standard/:type', async (req, res) => {
         const listData = {
             name: standardList.name,
             quality_preference: quality_preference,
+            client_description: client_description || '',
             user_id: req.session.user ? req.session.user.id : null,
             created_at: new Date()
         };
         const listRef = await firebase.db.collection('shopping_lists').add(listData);
         const listId = listRef.id;
-        // Agregar ítems de la lista estándar directamente
-        for (const item of standardList.items) {
-            const itemData = {
-                shopping_list_id: listId,
-                item_name_raw: item.name,
-                quantity_requested: item.quantity,
-                category: item.category || 'Otros',
-                created_at: new Date()
-            };
-            await firebase.db.collection('shopping_list_items').add(itemData);
+        
+        // Usar selección inteligente de IA si hay descripción del cliente
+        if (client_description && client_description.trim()) {
+            try {
+                const aiSelection = await AIService.selectProductsIntelligently(
+                    standardList.items,
+                    client_description,
+                    quality_preference
+                );
+                
+                // Procesar productos seleccionados por IA
+                for (const selectedProduct of aiSelection.selected_products) {
+                    const itemData = {
+                        shopping_list_id: listId,
+                        item_name_raw: selectedProduct.name,
+                        quantity_requested: selectedProduct.quantity,
+                        category: selectedProduct.category || 'Otros',
+                        created_at: new Date(),
+                        inventory_product_id: selectedProduct.inventory_id,
+                        price: selectedProduct.price,
+                        brand: selectedProduct.brand || '',
+                        ai_reason: selectedProduct.reason || ''
+                    };
+                    await firebase.db.collection('shopping_list_items').add(itemData);
+                }
+                
+                // Agregar productos adicionales sugeridos por IA
+                if (aiSelection.additional_suggestions && aiSelection.additional_suggestions.length > 0) {
+                    for (const suggestion of aiSelection.additional_suggestions) {
+                        const itemData = {
+                            shopping_list_id: listId,
+                            item_name_raw: suggestion.name,
+                            quantity_requested: suggestion.quantity || 1,
+                            category: suggestion.category || 'Otros',
+                            created_at: new Date(),
+                            inventory_product_id: suggestion.inventory_id,
+                            price: suggestion.price,
+                            brand: suggestion.brand || '',
+                            ai_reason: suggestion.reason || 'Sugerencia adicional de IA'
+                        };
+                        await firebase.db.collection('shopping_list_items').add(itemData);
+                    }
+                }
+                
+            } catch (aiError) {
+                console.error('Error en selección inteligente de IA:', aiError);
+                // Fallback al método original si la IA falla
+                for (const item of standardList.items) {
+                    const itemData = {
+                        shopping_list_id: listId,
+                        item_name_raw: item.name,
+                        quantity_requested: item.quantity,
+                        category: item.category || 'Otros',
+                        created_at: new Date()
+                    };
+                    await firebase.db.collection('shopping_list_items').add(itemData);
+                }
+            }
+        } else {
+            // Método original sin IA
+            for (const item of standardList.items) {
+                const itemData = {
+                    shopping_list_id: listId,
+                    item_name_raw: item.name,
+                    quantity_requested: item.quantity,
+                    category: item.category || 'Otros',
+                    created_at: new Date()
+                };
+                await firebase.db.collection('shopping_list_items').add(itemData);
+            }
         }
+        
         res.json({
             success: true,
             message: 'Lista estándar creada exitosamente',
@@ -556,6 +623,94 @@ router.get('/:listId/items/:itemId/options', async (req, res) => {
             success: false,
             message: 'Error al obtener opciones del producto'
         });
+    }
+});
+
+// Obtener alternativas de un producto (NUEVA LÓGICA CON IA)
+router.get('/:listId/items/:itemId/alternatives', async (req, res) => {
+    try {
+        const { itemId } = req.params;
+
+        // 1. Obtener el ítem original
+        const itemDoc = await firebase.db.collection('shopping_list_items').doc(itemId).get();
+        if (!itemDoc.exists) {
+            return res.status(404).json({ success: false, message: 'Ítem no encontrado.' });
+        }
+        const originalItem = { id: itemDoc.id, ...itemDoc.data() };
+        
+        // 2. Usar IA (o reglas) para obtener la "esencia" del producto.
+        const coreTerm = await AIService.getProductEssence(originalItem.item_name_raw);
+        
+        // Si no se pudo determinar una esencia, no devolver alternativas.
+        if (!coreTerm) {
+            return res.json({ success: true, alternatives: [] });
+        }
+
+        // 3. Buscar productos que compartan la misma esencia en la base de datos.
+        const productsSnapshot = await firebase.db.collection('products').get();
+        const alternatives = [];
+        
+        productsSnapshot.forEach(doc => {
+            const product = { id: doc.id, ...doc.data() };
+            const alternativeName = product.name.toLowerCase();
+
+            // Condición:
+            // 1. No es el mismo producto que el original.
+            // 2. El nombre del producto alternativo DEBE incluir la esencia.
+            if (originalItem.inventory_product_id !== product.id && alternativeName.includes(coreTerm)) {
+                alternatives.push(product);
+            }
+        });
+        
+        res.json({ success: true, alternatives: alternatives.slice(0, 10) });
+
+    } catch (error) {
+        console.error("Error obteniendo alternativas:", error);
+        res.status(500).json({ success: false, message: 'Error interno del servidor.' });
+    }
+});
+
+// Reemplazar un ítem de la lista con una alternativa
+router.post('/:listId/items/:itemId/replace', async (req, res) => {
+    try {
+        const { itemId } = req.params;
+        const { new_product_id } = req.body;
+
+        if (!new_product_id) {
+            return res.status(400).json({ success: false, message: 'Se requiere el ID del nuevo producto.' });
+        }
+
+        // 1. Obtener el nuevo producto del inventario
+        const newProductDoc = await firebase.db.collection('products').doc(new_product_id).get();
+        if (!newProductDoc.exists) {
+            return res.status(404).json({ success: false, message: 'El producto de reemplazo no se encuentra en el inventario.' });
+        }
+        const newProduct = newProductDoc.data();
+
+        // 2. Obtener el ítem original de la lista para mantener la cantidad
+        const originalItemDoc = await firebase.db.collection('shopping_list_items').doc(itemId).get();
+        if (!originalItemDoc.exists) {
+            return res.status(404).json({ success: false, message: 'El ítem original a reemplazar no existe.' });
+        }
+        const originalItem = originalItemDoc.data();
+
+        // 3. Actualizar el ítem en la lista con los datos del nuevo producto
+        await firebase.db.collection('shopping_list_items').doc(itemId).update({
+            item_name_raw: newProduct.name,
+            inventory_product_id: new_product_id,
+            price: newProduct.price,
+            brand: newProduct.brand,
+            category: newProduct.category,
+            quality_category: newProduct.quality_category,
+            ai_reason: 'Reemplazado manualmente por el usuario.',
+            updated_at: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        res.json({ success: true, message: 'Producto reemplazado con éxito.' });
+
+    } catch (error) {
+        console.error("Error reemplazando producto:", error);
+        res.status(500).json({ success: false, message: 'Error interno del servidor.' });
     }
 });
 

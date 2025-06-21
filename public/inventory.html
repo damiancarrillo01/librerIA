@@ -126,7 +126,7 @@
         // Cargar productos
         async function loadProducts() {
             try {
-                const response = await fetch('/api/inventory');
+                const response = await fetch('/api/products');
                 const data = await response.json();
 
                 if (!data.success) {
@@ -230,7 +230,7 @@
         // Editar producto
         async function editProduct(productId) {
             try {
-                const response = await fetch(`/api/inventory/${productId}`);
+                const response = await fetch(`/api/products/${productId}`);
                 const data = await response.json();
 
                 if (!data.success) {
@@ -328,17 +328,13 @@
                     options
                 };
 
-                const url = currentProductId 
-                    ? `/api/inventory/${currentProductId}`
-                    : '/api/inventory';
-                
+                let response;
+                const url = currentProductId ? `/api/products/${currentProductId}` : '/api/products';
                 const method = currentProductId ? 'PUT' : 'POST';
 
-                const response = await fetch(url, {
-                    method,
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(productData)
                 });
 
@@ -368,7 +364,7 @@
             }
 
             try {
-                const response = await fetch(`/api/inventory/${productId}`, {
+                const response = await fetch(`/api/products/${productId}`, {
                     method: 'DELETE'
                 });
 

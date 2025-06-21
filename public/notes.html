@@ -85,6 +85,15 @@
                             </select>
                         </div>
                         <div class="mb-3">
+                            <label for="clientDescriptionCustom" class="form-label">
+                                <i class="fas fa-user me-2"></i>
+                                Describe al cliente (opcional)
+                            </label>
+                            <textarea class="form-control" id="clientDescriptionCustom" name="clientDescriptionCustom" rows="3" 
+                                    placeholder="Ejemplo: Estudiante de secundaria, 15 años, le gusta el arte y las manualidades, presupuesto limitado..."></textarea>
+                            <div class="form-text">Esta información ayudará a la IA a seleccionar productos más adecuados.</div>
+                        </div>
+                        <div class="mb-3">
                             <label for="items_text" class="form-label">Ítems (uno por línea)</label>
                             <textarea class="form-control" id="items_text" name="items_text" rows="5" 
                                     placeholder="Ejemplo:&#10;2 Cuadernos&#10;5 Lápices&#10;1 Regla"></textarea>
@@ -94,6 +103,11 @@
                             Crear Lista
                         </button>
                     </form>
+
+                    <!-- Contenedor para mostrar resultados del procesamiento -->
+                    <div id="results-container" class="mt-4" style="display: none;">
+                        <!-- El contenido (éxito, errores, no encontrados) se generará aquí -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -108,6 +122,15 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="clientDescription" class="form-label">
+                            <i class="fas fa-user me-2"></i>
+                            Describe al cliente (opcional)
+                        </label>
+                        <textarea class="form-control" id="clientDescription" rows="3" 
+                                placeholder="Ejemplo: Estudiante de secundaria, 15 años, le gusta el arte y las manualidades, presupuesto limitado..."></textarea>
+                        <div class="form-text">Esta información ayudará a la IA a seleccionar productos más adecuados.</div>
+                    </div>
                     <div class="d-grid gap-2">
                         <button class="btn btn-outline-primary create-standard-btn" data-quality="economico">
                             <i class="fas fa-tags me-2"></i>
@@ -165,6 +188,7 @@
                     document.querySelector('.page-title').textContent = 'Editar Lista de Compras';
                     document.getElementById('list_name').value = list.name;
                     document.getElementById('quality_preference').value = list.quality_preference || 'cualquiera';
+                    document.getElementById('clientDescriptionCustom').value = list.client_description || '';
                     
                     // Cargar ítems en el área de texto
                     const itemsText = items.map(item => 
@@ -197,12 +221,16 @@
             qualityModal.hide();
             
             try {
+                const clientDescription = document.getElementById('clientDescription').value;
                 const response = await fetch(`/api/shopping/standard/${selectedListType}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ quality_preference: quality })
+                    body: JSON.stringify({ 
+                        quality_preference: quality,
+                        client_description: clientDescription 
+                    })
                 });
 
                 if (response.ok) {
@@ -225,61 +253,74 @@
         document.getElementById('custom-list-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
+            const submitButton = this.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Procesando...`;
+
+            const resultsContainer = document.getElementById('results-container');
+            resultsContainer.innerHTML = '';
+            resultsContainer.style.display = 'none';
+            
             const formData = new FormData(this);
             const data = {
                 name: formData.get('list_name'),
                 quality_preference: formData.get('quality_preference'),
+                client_description: formData.get('clientDescriptionCustom'),
                 items_text: formData.get('items_text')
             };
 
             try {
                 let response;
-                if (editingListId) {
-                    // Actualizar lista existente
+                const isEditing = !!editingListId;
+
+                if (isEditing) {
                     response = await fetch(`/api/shopping/${editingListId}`, {
                         method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(data)
                     });
                 } else {
-                    // Crear nueva lista
                     response = await fetch('/api/shopping', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(data)
                     });
                 }
+
                 const result = await response.json();
+                resultsContainer.style.display = 'block';
+
                 if (result.success) {
-                    // Mostrar productos realmente agregados
-                    if (result.added_items && result.added_items.length > 0) {
-                        let mensaje = 'Productos AGREGADOS a la lista:\n\n';
-                        result.added_items.forEach(item => {
-                            mensaje += `- ${item.name} (cantidad: ${item.quantity})\n`;
-                        });
-                        alert(mensaje);
-                        localStorage.setItem('addedItems', JSON.stringify(result.added_items));
+                    const listAction = isEditing ? 'actualizada' : 'creada';
+                    resultsContainer.innerHTML = `
+                        <div class="alert alert-success">
+                            <strong>¡Éxito!</strong> La lista ha sido ${listAction} correctamente.
+                            <a href="/list.html?id=${result.list_id}" class="btn btn-sm btn-success float-end">Ver Lista</a>
+                        </div>
+                    `;
+
+                    if (result.not_found_items && result.not_found_items.length > 0) {
+                        const itemsList = result.not_found_items.map(item => 
+                            `<li><strong>${item.name}</strong>: ${item.reason || 'No disponible.'}</li>`
+                        ).join('');
+                        
+                        resultsContainer.innerHTML += `
+                            <div class="alert alert-danger mt-3">
+                                <h5 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Productos No Disponibles</h5>
+                                <p>Los siguientes productos no se pudieron agregar porque no se encontraron o no había stock suficiente:</p>
+                                <ul>${itemsList}</ul>
+                            </div>
+                        `;
                     }
-                    // Mostrar productos sin stock
-                    if (result.no_stock_items && result.no_stock_items.length > 0) {
-                        let mensaje = 'Los siguientes productos NO se agregaron por falta de stock:\n\n';
-                        result.no_stock_items.forEach(item => {
-                            mensaje += `- ${item.name} (solicitado: ${item.quantity_requested}, disponible: ${item.stock_disponible})\n`;
-                        });
-                        alert(mensaje);
-                        localStorage.setItem('noStockItems', JSON.stringify(result.no_stock_items));
-                    }
-                    // Redirigir a la lista creada
-                    window.location.href = `/list.html?id=${result.list_id}`;
                 } else {
-                    alert(result.message || 'Error al crear la lista');
+                    resultsContainer.innerHTML = `<div class="alert alert-danger">${result.message || 'Ocurrió un error.'}</div>`;
                 }
             } catch (error) {
-                alert('Error al crear la lista: ' + error.message);
+                resultsContainer.style.display = 'block';
+                resultsContainer.innerHTML = `<div class="alert alert-danger">Error de conexión: ${error.message}</div>`;
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerHTML = `<i class="fas fa-save me-1"></i> ${editingListId ? 'Guardar Cambios' : 'Crear Lista'}`;
             }
         });
 

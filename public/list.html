@@ -55,10 +55,10 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Opciones de Producto</h5>
+                    <h5 class="modal-title" id="productOptionsModalTitle">Opciones de Producto</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" id="productOptionsModalBody">
                     <div id="productOptionsContent">
                         <!-- El contenido se cargará dinámicamente -->
                     </div>
@@ -189,7 +189,7 @@
                                 <p class="card-text">
                                     <small class="text-muted">
                                         <i class="fas fa-calendar me-1"></i>
-                                        Creada: ${new Date(list.createdAt).toLocaleDateString('es-ES', {
+                                        Creada: ${new Date(list.created_at).toLocaleDateString('es-ES', {
                                             day: '2-digit',
                                             month: '2-digit',
                                             year: 'numeric',
@@ -202,6 +202,13 @@
                                     <i class="fas fa-tag me-1"></i>
                                     Preferencia de calidad: ${list.quality_preference || 'Cualquiera'}
                                 </p>
+                                ${list.client_description ? `
+                                    <p class="card-text">
+                                        <i class="fas fa-user me-1"></i>
+                                        <strong>Descripción del cliente:</strong><br>
+                                        <small class="text-muted">${list.client_description}</small>
+                                    </p>
+                                ` : ''}
                             </div>
                             <div class="items-section">
                                 <h5 class="card-title">Productos de la Lista</h5>
@@ -218,8 +225,8 @@
                                             </thead>
                                             <tbody>
                                                 ${items.map(item => {
-                                                    const itemId = item.id || item._id;
-                                                    // Buscar el nombre real del producto de inventario asociado
+                                                    // La variable 'item' aquí es un documento de la colección 'shopping_list_items',
+                                                    // y 'item.id' es su ID único, que es lo que necesitamos.
                                                     let prodName = item.item_name_raw;
                                                     if (item.inventory_product_id && inventoryProducts.length > 0) {
                                                         const prod = inventoryProducts.find(p => p.id === item.inventory_product_id);
@@ -228,24 +235,18 @@
                                                     return `
                                                         <tr>
                                                             <td>${item.quantity_requested}</td>
-                                                            <td>${prodName}</td>
+                                                            <td>
+                                                                ${prodName}
+                                                                ${item.ai_reason ? `<br><small class="text-info"><i class="fas fa-robot me-1"></i>${item.ai_reason}</small>` : ''}
+                                                            </td>
                                                             <td>${item.category || 'Otros'}</td>
                                                             <td>
                                                                 <div class="btn-group">
-                                                                    <button onclick="viewProductOptions('${itemId}')" 
-                                                                            class="btn btn-outline-primary btn-sm">
-                                                                        <i class="fas fa-eye me-1"></i>
-                                                                        Ver
+                                                                    <button onclick="findAlternatives('${item.id}')" class="btn btn-outline-primary btn-sm">
+                                                                        <i class="fas fa-search me-1"></i> Alternativas
                                                                     </button>
-                                                                    <button onclick="editProduct('${itemId}')" 
-                                                                            class="btn btn-outline-warning btn-sm">
-                                                                        <i class="fas fa-edit me-1"></i>
-                                                                        Editar
-                                                                    </button>
-                                                                    <button onclick="deleteProduct('${itemId}')" 
-                                                                            class="btn btn-outline-danger btn-sm">
-                                                                        <i class="fas fa-trash me-1"></i>
-                                                                        Eliminar
+                                                                    <button onclick="deleteProduct('${item.id}')" class="btn btn-outline-danger btn-sm">
+                                                                        <i class="fas fa-trash me-1"></i> Eliminar
                                                                     </button>
                                                                 </div>
                                                             </td>
@@ -276,146 +277,118 @@
             }
         }
 
-        // Ver opciones de producto
-        async function viewProductOptions(productId) {
-            const container = document.getElementById('productOptionsContent');
-            if (!productId) {
-                container.innerHTML = `<div class="alert alert-danger">ID de producto no válido</div>`;
-                productOptionsModal.show();
-                return;
-            }
+        // Ver detalles de un producto (antes viewProductOptions)
+        async function viewProductDetails(productId) {
+            const modalTitle = document.getElementById('productOptionsModalTitle');
+            const modalBody = document.getElementById('productOptionsModalBody');
+            
+            modalTitle.textContent = 'Detalles del Producto';
+            modalBody.innerHTML = `<div class="text-center"><div class="spinner-border"></div></div>`;
+            productOptionsModal.show();
+
             try {
-                const response = await fetch(`/api/shopping/${currentListId}/items/${productId}/options`);
-                if (!response.ok) {
-                    throw new Error(`Error HTTP: ${response.status}`);
+                // Obtener todos los productos del inventario una vez si no los tenemos
+                if (!window.inventoryProducts) {
+                    const invRes = await fetch('/api/products');
+                    const invData = await invRes.json();
+                    if (invData.success) {
+                        window.inventoryProducts = invData.products;
+                    } else {
+                        window.inventoryProducts = [];
+                    }
                 }
+
+                // Primero, obtener el item de la lista para saber cuál es el `inventory_product_id`
+                const itemRes = await fetch(`/api/shopping/${currentListId}/items/${productId}`);
+                const itemData = await itemRes.json();
+
+                if (!itemData.success) {
+                    throw new Error('No se pudo cargar el ítem de la lista.');
+                }
+
+                const inventoryId = itemData.item.inventory_product_id;
+                const product = window.inventoryProducts.find(p => p.id === inventoryId);
+
+                if (product) {
+                    modalBody.innerHTML = `
+                        <h4>${product.name}</h4>
+                        <p>${product.description || 'Este producto no tiene una descripción detallada.'}</p>
+                        <hr>
+                        <p><strong>Marca:</strong> ${product.brand || 'N/A'}</p>
+                        <p><strong>Precio:</strong> $${product.price ? product.price.toFixed(2) : 'N/A'}</p>
+                        <p><strong>Categoría de Calidad:</strong> ${product.quality_category || 'N/A'}</p>
+                    `;
+                } else {
+                    modalBody.innerHTML = `<div class="alert alert-warning">No se encontró el producto en el inventario.</div>`;
+                }
+            } catch (error) {
+                console.error('Error al ver detalles:', error);
+                modalBody.innerHTML = `<div class="alert alert-danger">Error al cargar los detalles del producto: ${error.message}</div>`;
+            }
+        }
+
+        // Editar producto (ahora es "Buscar Alternativas")
+        async function findAlternatives(productId) {
+            const modalTitle = document.getElementById('productOptionsModalTitle');
+            const modalBody = document.getElementById('productOptionsModalBody');
+            
+            modalTitle.textContent = 'Buscar Alternativas';
+            modalBody.innerHTML = `<div class="text-center"><div class="spinner-border"></div></div>`;
+            productOptionsModal.show();
+
+            try {
+                const response = await fetch(`/api/shopping/${currentListId}/items/${productId}/alternatives`);
                 const data = await response.json();
+
                 if (!data.success) {
-                    throw new Error(data.message || 'Error al cargar las opciones');
+                    throw new Error(data.message);
                 }
-                const options = data.options;
-                container.innerHTML = `
-                    <div class="product-options">
-                        ${options.map(option => `
-                            <div class="product-option ${option.selected ? 'selected-option' : ''}">
-                                <div>
-                                    <h6 class="mb-1">${option.name}</h6>
-                                    <p class="mb-0 text-muted">${option.description || ''}</p>
+
+                if (data.alternatives.length === 0) {
+                    modalBody.innerHTML = `<div class="alert alert-info">No se encontraron alternativas para este producto.</div>`;
+                    return;
+                }
+
+                modalBody.innerHTML = `
+                    <p class="text-muted">Se encontraron ${data.alternatives.length} alternativas. Selecciona una para reemplazar el producto actual en tu lista.</p>
+                    <div class="list-group">
+                        ${data.alternatives.map(alt => `
+                            <a href="#" onclick="replaceProduct('${productId}', '${alt.id}')" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1">${alt.name}</h5>
+                                    <small class="text-success">$${alt.price.toFixed(2)}</small>
                                 </div>
-                                <div class="text-end">
-                                    <div class="mb-1">$${option.price.toLocaleString()}</div>
-                                    <button onclick="selectProductOption('${productId}', '${option.id}')" 
-                                            class="btn btn-sm ${option.selected ? 'btn-success' : 'btn-outline-primary'}">
-                                        ${option.selected ? 'Seleccionado' : 'Seleccionar'}
-                                    </button>
-                                </div>
-                            </div>
+                                <p class="mb-1">${alt.description || 'Sin descripción.'}</p>
+                                <small>Marca: ${alt.brand} - Calidad: ${alt.quality_category}</small>
+                            </a>
                         `).join('')}
                     </div>
                 `;
+
             } catch (error) {
-                console.error('Error cargando opciones:', error);
-                container.innerHTML = `<div class="alert alert-danger">Error al cargar las opciones: ${error.message}</div>`;
+                console.error('Error buscando alternativas:', error);
+                modalBody.innerHTML = `<div class="alert alert-danger">Error al buscar alternativas: ${error.message}</div>`;
             }
-            productOptionsModal.show();
         }
 
-        // Seleccionar opción de producto
-        async function selectProductOption(productId, optionId) {
+        async function replaceProduct(originalItemId, newProductId) {
             try {
-                const response = await fetch(`/api/shopping/${currentListId}/items/${productId}/select-option`, {
+                const response = await fetch(`/api/shopping/${currentListId}/items/${originalItemId}/replace`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ option_id: optionId })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    productOptionsModal.hide();
-                    loadListDetails(); // Recargar la lista para ver los cambios
-                } else {
-                    throw new Error(data.message || 'Error al seleccionar la opción');
-                }
-            } catch (error) {
-                console.error('Error seleccionando opción:', error);
-                alert('Error al seleccionar la opción: ' + error.message);
-            }
-        }
-
-        // Editar producto
-        async function editProduct(productId) {
-            const errorContainer = document.getElementById('editProductError');
-            if (errorContainer) errorContainer.remove();
-            if (!productId) {
-                mostrarErrorEnModalEdicion('ID de producto no válido');
-                editProductModal.show();
-                return;
-            }
-            try {
-                const response = await fetch(`/api/shopping/${currentListId}/items/${productId}`);
-                if (!response.ok) {
-                    throw new Error(`Error HTTP: ${response.status}`);
-                }
-                const data = await response.json();
-                if (!data.success) {
-                    throw new Error(data.message || 'Error al cargar el producto');
-                }
-                const product = data.item;
-                document.getElementById('editProductId').value = productId;
-                document.getElementById('editProductName').value = product.item_name_raw;
-                document.getElementById('editProductQuantity').value = product.quantity_requested;
-                document.getElementById('editProductCategory').value = product.category || 'Otros';
-                editProductModal.show();
-            } catch (error) {
-                console.error('Error cargando producto:', error);
-                mostrarErrorEnModalEdicion('Error al cargar el producto: ' + error.message);
-                editProductModal.show();
-            }
-        }
-
-        function mostrarErrorEnModalEdicion(msg) {
-            let form = document.getElementById('editProductForm');
-            if (form) {
-                let errorDiv = document.createElement('div');
-                errorDiv.id = 'editProductError';
-                errorDiv.className = 'alert alert-danger mt-2';
-                errorDiv.innerText = msg;
-                form.prepend(errorDiv);
-            }
-        }
-
-        // Guardar edición de producto
-        async function saveProductEdit() {
-            const productId = document.getElementById('editProductId').value;
-            const data = {
-                item_name_raw: document.getElementById('editProductName').value,
-                quantity_requested: parseInt(document.getElementById('editProductQuantity').value),
-                category: document.getElementById('editProductCategory').value
-            };
-
-            try {
-                const response = await fetch(`/api/shopping/${currentListId}/items/${productId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ new_product_id: newProductId })
                 });
 
                 const result = await response.json();
 
                 if (result.success) {
-                    editProductModal.hide();
-                    loadListDetails(); // Recargar la lista para ver los cambios
+                    productOptionsModal.hide();
+                    loadListDetails(); // Recargar la lista para ver el cambio
                 } else {
-                    throw new Error(result.message || 'Error al actualizar el producto');
+                    throw new Error(result.message);
                 }
             } catch (error) {
-                console.error('Error actualizando producto:', error);
-                alert('Error al actualizar el producto: ' + error.message);
+                alert(`Error al reemplazar el producto: ${error.message}`);
             }
         }
 

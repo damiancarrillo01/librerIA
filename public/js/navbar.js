@@ -23,7 +23,7 @@ function insertNavbar() {
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="/inventory.html">
-                                <i class="fas fa-boxes"></i> Inventario
+                                <i class="fas fa-box-open"></i> Productos (Firebase)
                             </a>
                         </li>
                     </ul>
