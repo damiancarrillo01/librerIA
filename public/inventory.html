@@ -112,6 +112,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/config.js"></script>
     <script>
         // Variables globales
         const productModal = new bootstrap.Modal(document.getElementById('productModal'));
@@ -120,69 +121,20 @@
         // Insertar navbar al cargar la página
         document.addEventListener('DOMContentLoaded', function() {
             insertNavbar();
-            loadProducts();
+            loadInventory();
         });
 
-        // Cargar productos
-        async function loadProducts() {
+        async function loadInventory() {
             try {
-                const response = await fetch('/api/products');
+                const response = await fetch(`${API_BASE_URL}/api/products`);
                 const data = await response.json();
-
-                if (!data.success) {
-                    throw new Error(data.message || 'Error al cargar productos');
+                if (data.success) {
+                    renderProducts(data.products);
+                } else {
+                    throw new Error(data.message || 'Error cargando el inventario');
                 }
-
-                const container = document.getElementById('products-container');
-                if (data.products.length === 0) {
-                    container.innerHTML = `
-                        <div class="col-12">
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                No hay productos en el inventario
-                            </div>
-                        </div>
-                    `;
-                    return;
-                }
-
-                container.innerHTML = data.products.map(product => `
-                    <div class="col-md-4 mb-4">
-                        <div class="card product-card h-100">
-                            <div class="card-body">
-                                <h5 class="card-title">${product.name}</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">${product.category}</h6>
-                                <p class="card-text">${product.description || 'Sin descripción'}</p>
-                                <div class="mb-2">
-                                    <span class="badge bg-primary">$${product.price.toLocaleString()}</span>
-                                    <span class="badge bg-secondary">Stock: ${product.stock}</span>
-                                </div>
-                                ${product.options && product.options.length > 0 ? `
-                                    <div class="mb-2">
-                                        <small class="text-muted">Opciones:</small><br>
-                                        ${product.options.map(opt => `
-                                            <span class="badge bg-info option-badge">
-                                                ${opt.name}: $${opt.price.toLocaleString()}
-                                            </span>
-                                        `).join('')}
-                                    </div>
-                                ` : ''}
-                            </div>
-                            <div class="card-footer bg-transparent">
-                                <div class="btn-group w-100">
-                                    <button onclick="editProduct('${product.id}')" class="btn btn-outline-warning">
-                                        <i class="fas fa-edit me-1"></i>Editar
-                                    </button>
-                                    <button onclick="deleteProduct('${product.id}')" class="btn btn-outline-danger">
-                                        <i class="fas fa-trash me-1"></i>Eliminar
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
             } catch (error) {
-                console.error('Error cargando productos:', error);
+                console.error('Error cargando el inventario:', error);
                 document.getElementById('products-container').innerHTML = `
                     <div class="col-12">
                         <div class="alert alert-danger">
@@ -192,6 +144,57 @@
                     </div>
                 `;
             }
+        }
+
+        function renderProducts(products) {
+            const container = document.getElementById('products-container');
+            if (products.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No hay productos en el inventario
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = products.map(product => `
+                <div class="col-md-4 mb-4">
+                    <div class="card product-card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">${product.name}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">${product.category}</h6>
+                            <p class="card-text">${product.description || 'Sin descripción'}</p>
+                            <div class="mb-2">
+                                <span class="badge bg-primary">$${product.price.toLocaleString()}</span>
+                                <span class="badge bg-secondary">Stock: ${product.stock}</span>
+                            </div>
+                            ${product.options && product.options.length > 0 ? `
+                                <div class="mb-2">
+                                    <small class="text-muted">Opciones:</small><br>
+                                    ${product.options.map(opt => `
+                                        <span class="badge bg-info option-badge">
+                                            ${opt.name}: $${opt.price.toLocaleString()}
+                                        </span>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <div class="btn-group w-100">
+                                <button onclick="editProduct('${product.id}')" class="btn btn-outline-warning">
+                                    <i class="fas fa-edit me-1"></i>Editar
+                                </button>
+                                <button onclick="deleteProduct('${product.id}')" class="btn btn-outline-danger">
+                                    <i class="fas fa-trash me-1"></i>Eliminar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
         }
 
         // Mostrar modal para agregar producto
@@ -230,7 +233,7 @@
         // Editar producto
         async function editProduct(productId) {
             try {
-                const response = await fetch(`/api/products/${productId}`);
+                const response = await fetch(`${API_BASE_URL}/api/products/${productId}`);
                 const data = await response.json();
 
                 if (!data.success) {
@@ -329,7 +332,7 @@
                 };
 
                 let response;
-                const url = currentProductId ? `/api/products/${currentProductId}` : '/api/products';
+                const url = currentProductId ? `${API_BASE_URL}/api/products/${currentProductId}` : `${API_BASE_URL}/api/products`;
                 const method = currentProductId ? 'PUT' : 'POST';
 
                 response = await fetch(url, {
@@ -350,7 +353,7 @@
                 }
 
                 productModal.hide();
-                loadProducts();
+                loadInventory();
             } catch (error) {
                 console.error('Error al guardar el producto:', error);
                 alert(error.message || 'Error al guardar el producto');
@@ -364,14 +367,14 @@
             }
 
             try {
-                const response = await fetch(`/api/products/${productId}`, {
+                const response = await fetch(`${API_BASE_URL}/api/products/${productId}`, {
                     method: 'DELETE'
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    loadProducts();
+                    loadInventory();
                 } else {
                     throw new Error(data.message || 'Error al eliminar el producto');
                 }

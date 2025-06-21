@@ -16,8 +16,26 @@ const aiRoutes = require('./routes/ai');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Configuración de CORS
+const allowedOrigins = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'https://proyecto1-d6fb7-85849.web.app' // Tu dominio de Firebase
+];
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Permitir peticiones sin origen (como las de Postman o apps móviles) o si el origen está en la lista blanca
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    }
+};
+
 // Configuración de middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
