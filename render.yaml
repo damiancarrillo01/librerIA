@@ -3,7 +3,7 @@ services:
     name: libreria-ia-backend
     env: node
     plan: free # El plan gratuito es ideal para empezar
-    buildCommand: "npm install"
+    buildCommand: "npm cache clean --force && npm install" # Forzar una instalación limpia
     startCommand: "node server.js"
     healthCheckPath: /
     envVars:
