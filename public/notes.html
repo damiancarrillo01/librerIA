@@ -178,7 +178,7 @@
         // Cargar lista para edición
         async function loadListForEditing(listId) {
             try {
-                const response = await fetch(`/api/shopping/${listId}`);
+                const response = await fetch(`${API_BASE_URL}/api/shopping/${listId}`);
                 const data = await response.json();
                 
                 if (data.success) {
@@ -250,20 +250,13 @@
             }
         }
 
-        // Manejar formulario personalizado
-        document.getElementById('custom-list-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const submitButton = this.querySelector('button[type="submit"]');
-            submitButton.disabled = true;
-            submitButton.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Procesando...`;
+        // Manejar envío del formulario personalizado
+        document.getElementById('custom-list-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            showLoadingIndicator();
 
-            const resultsContainer = document.getElementById('results-container');
-            resultsContainer.innerHTML = '';
-            resultsContainer.style.display = 'none';
-            
             const formData = new FormData(this);
-            const data = {
+            const listData = {
                 name: formData.get('list_name'),
                 quality_preference: formData.get('quality_preference'),
                 client_description: formData.get('clientDescriptionCustom'),
@@ -271,28 +264,27 @@
             };
 
             try {
-                let response;
-                const isEditing = !!editingListId;
+                let url = `${API_BASE_URL}/api/ai/list`;
+                let method = 'POST';
 
-                if (isEditing) {
-                    response = await fetch(`/api/shopping/${editingListId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
-                    });
-                } else {
-                    response = await fetch(`${API_BASE_URL}/api/shopping`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
-                    });
+                if (editingListId) {
+                    url = `${API_BASE_URL}/api/shopping/${editingListId}`;
+                    method = 'PUT';
                 }
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(listData)
+                });
 
                 const result = await response.json();
                 resultsContainer.style.display = 'block';
 
                 if (result.success) {
-                    const listAction = isEditing ? 'actualizada' : 'creada';
+                    const listAction = editingListId ? 'actualizada' : 'creada';
                     resultsContainer.innerHTML = `
                         <div class="alert alert-success">
                             <strong>¡Éxito!</strong> La lista ha sido ${listAction} correctamente.

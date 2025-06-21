@@ -105,7 +105,7 @@
         // Cargar listas del usuario
         async function loadUserLists() {
             try {
-                const response = await fetch('/api/shopping');
+                const response = await fetch(`${API_BASE_URL}/api/shopping`);
                 const data = await response.json();
                 const lists = data.lists || [];
                 const container = document.getElementById('user-lists-section');
@@ -194,47 +194,29 @@
 
         // Función para editar lista
         async function editList(listId) {
-            try {
-                const response = await fetch(`/api/shopping/${listId}`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Redirigir a la página de edición
-                    window.location.href = `/notes.html?edit=${listId}`;
-                } else {
-                    throw new Error(data.message || 'Error al cargar la lista');
-                }
-            } catch (error) {
-                console.error('Error al cargar la lista:', error);
-                alert('Error al cargar la lista: ' + error.message);
-            }
+            // Simplemente redirige a la página de edición con el ID
+            window.location.href = `/list.html?id=${listId}&edit=true`;
         }
 
         // Función para eliminar lista
         async function deleteList(listId) {
-            if (!confirm('¿Estás seguro de que deseas eliminar esta lista?')) {
-                return;
-            }
+            if (confirm('¿Estás seguro de que quieres eliminar esta lista?')) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/shopping/${listId}`, {
+                        method: 'DELETE'
+                    });
 
-            try {
-                const response = await fetch(`/api/shopping/${listId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json'
+                    if (response.ok) {
+                        // Recargar la lista de listas
+                        loadUserLists();
+                    } else {
+                        const errorData = await response.json();
+                        alert(`Error al eliminar la lista: ${errorData.message}`);
                     }
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Recargar la lista de listas
-                    loadUserLists();
-                } else {
-                    throw new Error(data.message || 'Error al eliminar la lista');
+                } catch (error) {
+                    console.error('Error al eliminar la lista:', error);
+                    alert('Error de conexión al intentar eliminar la lista.');
                 }
-            } catch (error) {
-                console.error('Error al eliminar la lista:', error);
-                alert('Error al eliminar la lista: ' + error.message);
             }
         }
 

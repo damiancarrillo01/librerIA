@@ -121,49 +121,35 @@
         // Insertar navbar al cargar la página
         document.addEventListener('DOMContentLoaded', async () => {
             insertNavbar();
-            // Mostrar productos realmente agregados si existen en localStorage
-            const addedItems = JSON.parse(localStorage.getItem('addedItems') || '[]');
-            if (addedItems.length > 0) {
-                let mensaje = 'Productos AGREGADOS a la lista:\n\n';
-                addedItems.forEach(item => {
-                    mensaje += `- ${item.name} (cantidad: ${item.quantity})\n`;
-                });
-                alert(mensaje);
-                localStorage.removeItem('addedItems');
-            }
-            // Mostrar productos sin stock si existen en localStorage
-            const noStockItems = JSON.parse(localStorage.getItem('noStockItems') || '[]');
-            if (noStockItems.length > 0) {
-                let mensaje = 'Los siguientes productos NO se agregaron por falta de stock:\n\n';
-                noStockItems.forEach(item => {
-                    mensaje += `- ${item.name} (solicitado: ${item.quantity_requested}, disponible: ${item.stock_disponible})\n`;
-                });
-                alert(mensaje);
-                localStorage.removeItem('noStockItems');
-            }
-            const pathParts = window.location.pathname.split('/');
-            currentListId = pathParts[pathParts.length - 1];
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            currentListId = urlParams.get('id');
             
             if (currentListId) {
                 await loadListDetails();
+            } else {
+                document.getElementById('list-details').innerHTML = `
+                    <div class="alert alert-danger">No se especificó ninguna lista.</div>
+                `;
             }
         });
 
         // Cargar detalles de la lista
         async function loadListDetails() {
+            const container = document.getElementById('list-details');
+            container.innerHTML = `<div class="text-center"><div class="spinner-border text-primary"></div></div>`;
             try {
                 const response = await fetch(`${API_BASE_URL}/api/shopping/${currentListId}`);
                 const data = await response.json();
                 
-                if (data.success) {
-                    document.getElementById('list-name-display').textContent = data.list.name;
-                    renderItems(data.items);
+                if (data.list) {
+                    renderList(data.list, data.items);
                 } else {
-                    throw new Error(data.message);
+                    throw new Error(data.message || 'No se pudo cargar la lista.');
                 }
             } catch (error) {
                 console.error('Error cargando detalles:', error);
-                document.getElementById('list-details').innerHTML = `
+                container.innerHTML = `
                     <div class="alert alert-danger">
                         <i class="fas fa-exclamation-triangle me-2"></i>
                         ${error.message}
@@ -184,9 +170,9 @@
             try {
                 // Obtener todos los productos del inventario una vez si no los tenemos
                 if (!window.inventoryProducts) {
-                    const invRes = await fetch('/api/products');
+                    const invRes = await fetch(`${API_BASE_URL}/api/products`);
                     const invData = await invRes.json();
-                    if (invData.success) {
+                    if (invData.products) {
                         window.inventoryProducts = invData.products;
                     } else {
                         window.inventoryProducts = [];
@@ -194,11 +180,11 @@
                 }
 
                 // Primero, obtener el item de la lista para saber cuál es el `inventory_product_id`
-                const itemRes = await fetch(`/api/shopping/${currentListId}/items/${productId}`);
+                const itemRes = await fetch(`${API_BASE_URL}/api/shopping/${currentListId}/items/${productId}`);
                 const itemData = await itemRes.json();
 
-                if (!itemData.success) {
-                    throw new Error('No se pudo cargar el ítem de la lista.');
+                if (!itemData.item) {
+                    throw new Error(itemData.message || 'No se encontró el producto en la lista.');
                 }
 
                 const inventoryId = itemData.item.inventory_product_id;
@@ -235,134 +221,133 @@
                 const response = await fetch(`${API_BASE_URL}/api/shopping/${currentListId}/items/${productId}/alternatives`);
                 const data = await response.json();
 
-                if (!data.success) {
-                    throw new Error(data.message);
-                }
-
-                if (data.alternatives.length === 0) {
+                if (data.alternatives) {
+                    renderAlternatives(productId, data.alternatives);
+                } else {
                     modalBody.innerHTML = `<div class="alert alert-info">No se encontraron alternativas para este producto.</div>`;
-                    return;
                 }
-
-                modalBody.innerHTML = `
-                    <p class="text-muted">Se encontraron ${data.alternatives.length} alternativas. Selecciona una para reemplazar el producto actual en tu lista.</p>
-                    <div class="list-group">
-                        ${data.alternatives.map(alt => `
-                            <a href="#" onclick="replaceProduct('${productId}', '${alt.id}')" class="list-group-item list-group-item-action">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <h5 class="mb-1">${alt.name}</h5>
-                                    <small class="text-success">$${alt.price.toFixed(2)}</small>
-                                </div>
-                                <p class="mb-1">${alt.description || 'Sin descripción.'}</p>
-                                <small>Marca: ${alt.brand} - Calidad: ${alt.quality_category}</small>
-                            </a>
-                        `).join('')}
-                    </div>
-                `;
-
             } catch (error) {
                 console.error('Error buscando alternativas:', error);
                 modalBody.innerHTML = `<div class="alert alert-danger">Error al buscar alternativas: ${error.message}</div>`;
             }
         }
 
-        async function replaceProduct(originalItemId, newProductId) {
+        async function selectAlternative(originalProductId, alternativeProductId) {
             try {
-                const response = await fetch(`${API_BASE_URL}/api/shopping/${currentListId}/items/${originalItemId}/replace`, {
+                const response = await fetch(`${API_BASE_URL}/api/shopping/${currentListId}/items/${originalProductId}/select-alternative`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ new_product_id: newProductId })
+                    body: JSON.stringify({ alternative_product_id: alternativeProductId })
                 });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    productOptionsModal.hide();
-                    loadListDetails(); // Recargar la lista para ver el cambio
+                const data = await response.json();
+                if (data.message === "Alternative selected successfully") {
+                    await loadListDetails(); // Recargar la lista para ver el cambio
                 } else {
-                    throw new Error(result.message);
+                    throw new Error(data.message || "Error al seleccionar la alternativa.");
                 }
             } catch (error) {
-                alert(`Error al reemplazar el producto: ${error.message}`);
+                console.error('Error al seleccionar alternativa:', error);
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        // Cargar datos del producto en el modal de edición
+        async function editProduct(productId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/shopping/${currentListId}/items/${productId}`);
+                const data = await response.json();
+                if (data.item) {
+                    document.getElementById('editProductId').value = productId;
+                    document.getElementById('editProductName').value = data.item.item_name_raw;
+                    document.getElementById('editProductQuantity').value = data.item.quantity_requested;
+                    document.getElementById('editProductCategory').value = data.item.category;
+                    editProductModal.show();
+                } else {
+                    throw new Error(data.message || "No se pudo cargar el producto.");
+                }
+            } catch (error) {
+                alert('Error al cargar producto para editar: ' + error.message);
             }
         }
 
-        // Eliminar producto
+        // Guardar cambios del producto
+        async function saveProductEdit() {
+            const productId = document.getElementById('editProductId').value;
+            const productData = {
+                item_name: document.getElementById('editProductName').value,
+                quantity: parseInt(document.getElementById('editProductQuantity').value, 10),
+                category: document.getElementById('editProductCategory').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/shopping/${currentListId}/items/${productId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(productData)
+                });
+
+                const result = await response.json();
+                if (result.message === "Item updated successfully") {
+                    editProductModal.hide();
+                    await loadListDetails();
+                } else {
+                    throw new Error(result.message || "Error al guardar los cambios.");
+                }
+            } catch (error) {
+                alert('Error al guardar: ' + error.message);
+            }
+        }
+        
+        // Eliminar un producto de la lista
         async function deleteProduct(productId) {
-            // Creamos un modal simple para confirmar y mostrar errores
-            let modalDiv = document.createElement('div');
-            modalDiv.innerHTML = `
-            <div class='modal fade' id='modalEliminarProducto' tabindex='-1'>
-                <div class='modal-dialog'>
-                    <div class='modal-content'>
-                        <div class='modal-header'>
-                            <h5 class='modal-title'>Eliminar producto</h5>
-                            <button type='button' class='btn-close' data-bs-dismiss='modal'></button>
-                        </div>
-                        <div class='modal-body' id='deleteProductModalBody'>
-                            ¿Estás seguro de que deseas eliminar este producto?
-                        </div>
-                        <div class='modal-footer'>
-                            <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Cancelar</button>
-                            <button type='button' class='btn btn-danger' id='confirmDeleteProductBtn'>Eliminar</button>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-            document.body.appendChild(modalDiv);
-            let modal = new bootstrap.Modal(modalDiv.querySelector('#modalEliminarProducto'));
-            modal.show();
-            modalDiv.querySelector('#confirmDeleteProductBtn').addEventListener('click', async function() {
+            if (confirm('¿Seguro que quieres eliminar este producto de la lista?')) {
                 try {
                     const response = await fetch(`${API_BASE_URL}/api/shopping/${currentListId}/items/${productId}`, {
                         method: 'DELETE'
                     });
-                    const data = await response.json();
-                    if (data.success) {
-                        modal.hide();
-                        setTimeout(()=>modalDiv.remove(), 300);
-                        loadListDetails(); // Recargar la lista para ver los cambios
+                    const result = await response.json();
+                     if (response.ok) {
+                        await loadListDetails();
                     } else {
-                        throw new Error(data.message || 'Error al eliminar el producto');
+                        throw new Error(result.message || "Error al eliminar.");
                     }
                 } catch (error) {
-                    console.error('Error eliminando producto:', error);
-                    document.getElementById('deleteProductModalBody').innerHTML = `<div class='alert alert-danger'>Error al eliminar el producto: ${error.message}</div>`;
+                    alert('Error al eliminar: ' + error.message);
                 }
-            });
-            // Limpiar modal al cerrar
-            modalDiv.querySelector('.btn-close').addEventListener('click', function() {
-                setTimeout(()=>modalDiv.remove(), 300);
-            });
-            modalDiv.querySelector('.btn-secondary').addEventListener('click', function() {
-                setTimeout(()=>modalDiv.remove(), 300);
-            });
+            }
         }
 
-        // Eliminar lista
-        async function deleteList(listId) {
-            if (!confirm('¿Estás seguro de que deseas eliminar esta lista?')) {
+        // Añadir nuevo producto a la lista
+        async function addProductToList(event) {
+            event.preventDefault();
+            const form = event.target;
+            const productName = form.elements['new-product-name'].value;
+            const productQuantity = parseInt(form.elements['new-product-qty'].value, 10);
+
+            if (!productName || !productQuantity) {
+                alert('Por favor, completa nombre y cantidad.');
                 return;
             }
 
             try {
-                const response = await fetch(`/api/shopping/${listId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                const response = await fetch(`${API_BASE_URL}/api/shopping/${currentListId}/items`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        item_name: productName,
+                        quantity: productQuantity
+                    })
                 });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    window.location.href = '/home.html';
+
+                const result = await response.json();
+                if (result.item) {
+                    form.reset();
+                    await loadListDetails();
                 } else {
-                    throw new Error(data.message || 'Error al eliminar la lista');
+                    throw new Error(result.message || "No se pudo añadir el producto.");
                 }
             } catch (error) {
-                console.error('Error al eliminar la lista:', error);
-                alert('Error al eliminar la lista: ' + error.message);
+                alert('Error al añadir producto: ' + error.message);
             }
         }
     </script>
