@@ -150,12 +150,116 @@
             } catch (error) {
                 console.error('Error cargando detalles:', error);
                 container.innerHTML = `
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        ${error.message}
-                    </div>
+                    <div class="alert alert-danger">${error.message}</div>
                 `;
             }
+        }
+
+        function renderList(list, items) {
+            const container = document.getElementById('list-details');
+            
+            const totalCost = items.reduce((sum, item) => sum + (item.selected_price || 0), 0);
+            const totalItems = items.reduce((sum, item) => sum + (item.quantity_requested || 0), 0);
+
+            container.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 id="list-name-display">${list.name}</h2>
+                    <a href="/home.html" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Volver a Mis Listas
+                    </a>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">Resumen de la Lista</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong><i class="fas fa-shopping-cart me-2"></i>Total de productos:</strong> ${totalItems}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong><i class="fas fa-dollar-sign me-2"></i>Costo total estimado:</strong> $${totalCost.toLocaleString('es-CL')}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="mb-3">Productos en la lista</h3>
+                <div id="items-container" class="list-group mb-4">
+                    ${items.map(item => renderItem(item)).join('')}
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Añadir Nuevo Producto</h5>
+                        <form id="add-product-form" onsubmit="addProductToList(event)">
+                            <div class="row align-items-end">
+                                <div class="col-md-6 mb-2">
+                                    <label for="new-product-name" class="form-label">Nombre del producto</label>
+                                    <input type="text" id="new-product-name" class="form-control" required>
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <label for="new-product-qty" class="form-label">Cantidad</label>
+                                    <input type="number" id="new-product-qty" class="form-control" min="1" value="1" required>
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fas fa-plus me-2"></i>Añadir
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderItem(item) {
+            return `
+                <div class="list-group-item" id="item-${item.id}">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">${item.item_name_raw}</h5>
+                        <small>Cantidad: ${item.quantity_requested}</small>
+                    </div>
+                    <p class="mb-1">
+                        Producto seleccionado: <strong>${item.selected_product_name || 'Ninguno'}</strong>
+                    </p>
+                    <p class="mb-1">
+                        Precio: <strong>$${(item.selected_price || 0).toLocaleString('es-CL')}</strong>
+                    </p>
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-outline-info" onclick="findAlternatives('${item.id}')">
+                            <i class="fas fa-search me-1"></i>Buscar Alternativas
+                        </button>
+                        <button class="btn btn-sm btn-outline-warning" onclick="editProduct('${item.id}')">
+                            <i class="fas fa-edit me-1"></i>Editar
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${item.id}')">
+                            <i class="fas fa-trash me-1"></i>Eliminar
+                        </button>
+                    </div>
+                    <div class="product-options mt-3" id="alternatives-${item.id}"></div>
+                </div>
+            `;
+        }
+
+        function renderAlternatives(productId, alternatives) {
+            const container = document.getElementById(`alternatives-${productId}`);
+            if (alternatives.length === 0) {
+                container.innerHTML = `<div class="alert alert-sm alert-warning">No se encontraron alternativas.</div>`;
+            } else {
+                container.innerHTML = `
+                    <h6>Alternativas encontradas:</h6>
+                    ${alternatives.map(alt => `
+                        <div class="product-option">
+                            <span>${alt.name} - <strong>$${alt.price.toLocaleString('es-CL')}</strong> (${alt.quality_category})</span>
+                            <button class="btn btn-sm btn-success" onclick="selectAlternative('${productId}', '${alt.id}')">
+                                Seleccionar
+                            </button>
+                        </div>
+                    `).join('')}
+                `;
+            }
+            container.style.display = 'block';
         }
 
         // Ver detalles de un producto (antes viewProductOptions)

@@ -20,7 +20,8 @@ const PORT = process.env.PORT || 3000;
 const allowedOrigins = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
-    'https://proyecto1-d6fb7-85849.web.app' // Tu dominio de Firebase
+    'https://proyecto1-d6fb7-85849.web.app', // URL de Firebase Hosting
+    'https://proyecto1-d6fb7-85849.web.app'  // Re-añadida para forzar reconstrucción
 ];
 
 const corsOptions = {
