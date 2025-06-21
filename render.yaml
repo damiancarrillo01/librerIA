@@ -8,7 +8,7 @@ services:
     healthCheckPath: /
     envVars:
       - key: NODE_VERSION
-        value: "18.17.1" # Usar una versión LTS de Node.js
+        value: "20.11.0" # Versión LTS recomendada
       - key: GOOGLE_AI_API_KEY
         sync: false # Sincronización desactivada para que la gestiones desde el dashboard de Render
       - key: FIREBASE_PROJECT_ID
